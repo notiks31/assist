@@ -43,7 +43,7 @@
                     <button class="pill-btn" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
                     <button class="pill-btn" onclick="fillSearch('현위치', '회사')">🏢 회사로</button>
                 </div>
-                <button class="btn-search" onclick="findTmapRoute()">대중교통 경로 검색</button>
+                <button class="btn-search" onclick="findTRoute()">대중교통 경로 검색</button>
             </div>
 
             <div id="resultCard" class="result-card">
@@ -62,24 +62,24 @@
     </div>
 </div>
 
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
+<script type="text/javascript" src="https://dapi.kakao.com/v2/s/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
     /* -------------------------------------------
        [1] 초기화 및 변수 설정
        ------------------------------------------- */
-    const mapContainer = document.getElementById('map');
-    const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 7 };
-    const map = new kakao.maps.Map(mapContainer, mapOption);
-    const ps = new kakao.maps.services.Places();
+    const Container = document.getElementById('');
+    const Option = { center: new kakao.s.LatLng(37.566826, 126.9786567), level: 7 };
+    const  = new kakao.s.(Container, Option);
+    const ps = new kakao.s.services.Places();
     
     let markers = [];
     let polylines = [];
     let isTrafficOn = false;
 
-    // ★★★ [필수] TMAP App Key 입력 (SK Open API) ★★★
-    // https://tmapapi.sktelecom.com/ 에서 발급받은 'App Key'를 넣으세요.
-    const TMAP_APP_KEY = '여기에_TMAP_APP_KEY를_넣으세요'; 
+    // ★★★ [필수] T App Key 입력 (SK Open API) ★★★
+    // https://tapi.sktelecom.com/ 에서 발급받은 'App Key'를 넣으세요.
+    const T_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
     window.onload = () => moveToCurrentLocation();
 
