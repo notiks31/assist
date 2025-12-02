@@ -29,17 +29,13 @@ body {
 
 /* [2. Top Map Area] */
 .top-map-area {
-    height: 42%;
+    height: 45%; /* 상단 바가 없어져서 지도를 조금 더 키움 */
     background-color: #eef2f5;
     position: relative;
     overflow: hidden;
 }
 
-.status-bar {
-    position: absolute; top: 15px; left: 25px; right: 25px; z-index: 10;
-    display: flex; justify-content: space-between; color: var(--text-dark); font-weight: bold; font-size: 14px;
-    text-shadow: 0 0 2px white;
-}
+/* 상단 상태바 제거됨 */
 
 .map-badge {
     position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -49,6 +45,14 @@ body {
     font-size: 14px; z-index: 10;
     display: flex; align-items: center; gap: 6px;
     white-space: nowrap;
+}
+
+/* 실시간 버스 테스트 버튼 */
+.bus-test-btn {
+    position: absolute; top: 20px; right: 20px; z-index: 20;
+    background: white; border: 1px solid #ddd; padding: 8px 12px;
+    border-radius: 20px; font-size: 12px; font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;
 }
 
 /* [3. Bottom Content Area] */
@@ -113,6 +117,17 @@ body {
 .suggestion-item:last-child { border-bottom: none; }
 .suggestion-item:hover { background-color: #f8f9fa; color: var(--primary); font-weight: bold; }
 .match-text { color: var(--primary); font-weight: bold; }
+
+/* 즐겨찾기 스타일 수정 */
+.favorite-box {
+    display: flex; align-items: center; justify-content: space-between;
+    background: white; border: 1px solid #eee; padding: 15px; border-radius: 12px;
+    cursor: pointer;
+}
+.favorite-edit-btn {
+    font-size: 18px; color: #ccc; padding: 5px; cursor: pointer;
+}
+.favorite-edit-btn:hover { color: var(--text-dark); }
 
 
 /* Timeline UI */
