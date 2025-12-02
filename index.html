@@ -4,16 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>환승 어시스트 (Transfer Assist)</title>
-    
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .realtime-clock-overlay {
+            position: absolute; top: 20px; left: 20px; z-index: 20;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px; border-radius: 20px;
+            font-weight: 800; font-size: 14px; color: var(--text-dark);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; align-items: center; gap: 5px;
+        }
+    </style>
 </head>
 <body>
 
 <div class="app-container">
     <div class="top-map-area">
+        <div class="realtime-clock-overlay">
+            🕒 <span id="clock-text">00:00:00</span>
+        </div>
+
         <div id="map" style="width:100%; height:100%;"></div>
 
-        <div class="map-badge" id="map-status-text">📍 내 위치 찾는 중...</div>
+        <div class="map-badge" id="map-status-text">📍 경로를 입력해주세요</div>
 
         <button class="bus-test-btn" onclick="getRealBusData()">🚌 버스 보기 (실시간)</button>
     </div>
@@ -26,216 +40,256 @@
             <div class="input-group">
                 <div class="input-box">
                     <span>🔵</span> 
-                    <input type="text" id="start-input" placeholder="출발지 검색" onkeyup="filterPlaces('start-input', 'start-list')">
+                    <input type="text" id="start-input" placeholder="출발지 (예: 부산역)" onkeyup="handleEnter(event)">
                 </div>
-                <div id="start-list" class="suggestion-list"></div>
             </div>
 
             <div class="input-group">
                 <div class="input-box">
                     <span>🔴</span> 
-                    <input type="text" id="end-input" placeholder="도착지 검색" onkeyup="filterPlaces('end-input', 'end-list')">
+                    <input type="text" id="end-input" placeholder="도착지 (예: 광안리)" onkeyup="handleEnter(event)">
                 </div>
-                <div id="end-list" class="suggestion-list"></div>
             </div>
             
             <div style="margin-top: 20px;">
-                <div style="font-size:12px; color:#888; margin-bottom:10px;">즐겨찾기</div>
-                
                 <div class="favorite-box">
                     <div style="flex:1;" onclick="useFavorite()">
                         <span>⭐</span> 
                         <span id="fav-title" style="font-weight:bold; margin-left:5px;">집 → 학교</span><br>
                         <span id="fav-desc" style="font-size:11px; color:#aaa; margin-left:25px;">33번 버스 이용</span>
                     </div>
-                    <div class="favorite-edit-btn" onclick="editFavorite(event)">⚙️</div>
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="goToStep(2)">경로 찾기</button>
+            <button class="btn btn-primary" onclick="findRouteOnMap()">경로 찾기</button>
         </div>
 
         <div id="step-2" class="screen">
             <div class="content-header">
-                <span>추천 경로</span>
-                <span style="font-size:14px; color:var(--primary);">24분 소요</span>
+                <span>경로 탐색 결과</span>
+                <span style="font-size:14px; color:var(--primary);">지도 확인</span>
             </div>
 
             <div class="timeline-container">
                 <div class="timeline-left">
-                    <span class="timeline-time">12:36</span>
+                    <span class="timeline-time" id="start-time-text">--:--</span>
                     <div class="timeline-dot active"></div>
                     <div class="timeline-line active"></div>
                 </div>
                 <div class="timeline-right">
-                    <div class="location-title" id="route-start-text">출발지</div>
+                    <div class="location-title" id="res-start-text">출발지</div>
                 </div>
 
                 <div class="timeline-left">
                     <div class="timeline-line active"></div>
-                    <span class="timeline-icon">🚶</span>
+                    <span class="timeline-icon">🚌</span>
                 </div>
                 <div class="timeline-right">
-                    <div class="location-title">도보 1분</div>
+                    <div class="location-title">이동 중</div>
+                    <div class="location-desc">지도에 표시된 경로를 따라 이동합니다.</div>
                 </div>
 
                 <div class="timeline-left">
-                    <span class="timeline-time">12:42</span>
-                    <div class="timeline-dot active"></div>
-                    <div class="timeline-line active"></div>
-                </div>
-                <div class="timeline-right">
-                    <div class="location-title">정류장 도착</div>
-                     <div class="bus-info-box" onclick="goToStep(3)">
-                        <div style="margin-bottom:5px;">
-                            <span class="bus-tag">곧 도착</span>
-                            <span style="color:var(--primary); font-weight:bold;">33번</span>
-                        </div>
-                        <div class="location-desc">
-                            ⌄ 5분 (정류장 4개) 이동<br>
-                            개금역 경유
-                        </div>
-                    </div>
-                </div>
-
-                <div class="timeline-left">
-                     <span class="timeline-icon">🚌</span>
-                </div>
-                <div class="timeline-right">
-                    <div class="location-title">버스 이동 중</div>
-                </div>
-
-                 <div class="timeline-left">
                     <div class="timeline-dot"></div>
                 </div>
                 <div class="timeline-right">
-                    <div class="location-title" id="route-end-text">도착지</div>
+                    <div class="location-title" id="res-end-text">도착지</div>
                 </div>
             </div>
 
             <button class="btn btn-primary" onclick="goToStep(3)">안내 시작</button>
-            <button class="btn btn-outline" onclick="goToStep(1)">뒤로 가기</button>
+            <button class="btn btn-outline" onclick="goToStep(1)">다시 검색</button>
         </div>
 
         <div id="step-3" class="screen">
-            <div class="content-header">버스 기다리는 중</div>
-            <div class="bus-info-box" style="text-align:center; background:white; border:2px solid var(--primary);">
-                <div style="font-size:14px;">33번 버스</div>
-                <div style="font-size:32px; font-weight:bold; color:var(--danger); margin:10px 0;">3분 20초</div>
-                <div style="color:#888;">잠시 후 도착합니다</div>
-            </div>
-            <button class="btn btn-primary" onclick="goToStep(4)">버스 탑승 완료</button>
-        </div>
-
-        <div id="step-4" class="screen">
-            <div class="content-header">이동 중...</div>
-            <div style="text-align:center; margin-top:50px;">
-                <p>목적지로 이동하고 있습니다.</p>
-                <button class="btn btn-warning" onclick="goToStep(5)">🔔 하차 벨 누르기</button>
-            </div>
-        </div>
-        
-        <div id="step-5" class="screen">
-            <div style="text-align:center; margin-top:30px;">
-                <div style="font-size:60px;">🎉</div>
-                <h2>도착 완료!</h2>
-                <button class="btn btn-primary" onclick="goToStep(1)">처음으로</button>
+            <div class="content-header">안내 중</div>
+            <div style="text-align:center; padding-top:50px;">
+                <h3>안전하게 이동하세요!</h3>
+                <p style="color:#888;">지도를 보고 이동 경로를 확인하세요.</p>
+                <button class="btn btn-primary" onclick="goToStep(1)">안내 종료</button>
             </div>
         </div>
 
     </div>
 </div>
 
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df"></script>
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
     /* =========================================
-       [기능 1] 지도 및 내 위치 설정
+       [기능 1] 실시간 시계 (초 단위 갱신)
+       ========================================= */
+    function startClock() {
+        const clockTarget = document.getElementById("clock-text");
+        setInterval(() => {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ko-KR', { hour12: false });
+            clockTarget.innerText = timeString;
+        }, 1000);
+    }
+    startClock(); // 시계 시작
+
+
+    /* =========================================
+       [기능 2] 지도 및 장소 검색 (진짜 지도 연동)
        ========================================= */
     var mapContainer = document.getElementById('map');
     var mapOption = { 
-        center: new kakao.maps.LatLng(35.1512, 129.0123), // 기본: 부산 냉정역
-        level: 6 // 버스가 잘 보이도록 조금 넓게 잡음
+        center: new kakao.maps.LatLng(35.1512, 129.0123), 
+        level: 7 
     };
     var map = new kakao.maps.Map(mapContainer, mapOption);
     
-    // 내 위치 마커
-    var myMarker = new kakao.maps.Marker({
-        position: map.getCenter(), 
-        map: null 
-    });
+    // 장소 검색 객체
+    var ps = new kakao.maps.services.Places(); 
+    
+    // 마커와 선을 담아둘 변수 (검색할 때마다 지우기 위해)
+    var markers = [];
+    var polyline = null;
 
-    // 브라우저 GPS 사용 (허용 시 내 위치로 이동)
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            var lat = position.coords.latitude;
-            var lon = position.coords.longitude;
-            var locPosition = new kakao.maps.LatLng(lat, lon);
+    // 경로 찾기 실행 함수
+    async function findRouteOnMap() {
+        const startKeyword = document.getElementById('start-input').value;
+        const endKeyword = document.getElementById('end-input').value;
 
-            map.setCenter(locPosition);
-            myMarker.setPosition(locPosition);
-            myMarker.setMap(map);
+        if(!startKeyword || !endKeyword) {
+            alert("출발지와 도착지를 모두 입력해주세요.");
+            return;
+        }
+
+        // 1. 기존 마커/선 지우기
+        removeMarkers();
+        if(polyline) polyline.setMap(null);
+
+        try {
+            document.getElementById('map-status-text').innerText = "🔍 위치 검색 중...";
             
-            document.getElementById('map-status-text').innerText = "📍 현재 내 위치";
+            // 2. 출발지, 도착지 좌표 검색 (비동기 처리)
+            const startCoords = await searchLocation(startKeyword);
+            const endCoords = await searchLocation(endKeyword);
+
+            if(!startCoords || !endCoords) {
+                alert("장소를 찾을 수 없습니다. 정확한 지명을 입력해주세요.");
+                document.getElementById('map-status-text').innerText = "❌ 검색 실패";
+                return;
+            }
+
+            // 3. 지도에 마커 찍기
+            addMarker(startCoords, "출발: " + startKeyword, "🔵");
+            addMarker(endCoords, "도착: " + endKeyword, "🔴");
+
+            // 4. 두 지점을 잇는 선 그리기 (직선)
+            // (참고: 실제 도로 경로는 카카오 모빌리티 유료 API가 필요하므로, 여기선 직선으로 표현됩니다)
+            var linePath = [ startCoords, endCoords ];
+            polyline = new kakao.maps.Polyline({
+                path: linePath,
+                strokeWeight: 5,
+                strokeColor: '#6A67CE',
+                strokeOpacity: 0.8,
+                strokeStyle: 'solid'
+            });
+            polyline.setMap(map);
+
+            // 5. 두 지점이 다 보이도록 지도 범위 재설정 (Bounds)
+            var bounds = new kakao.maps.LatLngBounds();
+            bounds.extend(startCoords);
+            bounds.extend(endCoords);
+            map.setBounds(bounds);
+
+            // 6. 텍스트 업데이트 및 화면 전환
+            document.getElementById('res-start-text').innerText = startKeyword;
+            document.getElementById('res-end-text').innerText = endKeyword;
+            
+            const now = new Date();
+            document.getElementById('start-time-text').innerText = 
+                String(now.getHours()).padStart(2,'0') + ":" + String(now.getMinutes()).padStart(2,'0');
+
+            document.getElementById('map-status-text').innerText = "🗺️ 경로 표시 완료";
+            goToStep(2);
+
+        } catch (err) {
+            console.error(err);
+            alert("검색 중 오류가 발생했습니다.");
+        }
+    }
+
+    // 장소 검색 헬퍼 함수 (Promise 사용)
+    function searchLocation(keyword) {
+        return new Promise((resolve, reject) => {
+            ps.keywordSearch(keyword, (data, status) => {
+                if (status === kakao.maps.services.Status.OK) {
+                    // 검색 결과 중 첫 번째(가장 정확한) 좌표 반환
+                    resolve(new kakao.maps.LatLng(data[0].y, data[0].x));
+                } else {
+                    resolve(null); // 검색 실패
+                }
+            });
         });
     }
 
+    // 마커 추가 함수
+    function addMarker(position, title, iconType) {
+        var marker = new kakao.maps.Marker({
+            position: position,
+            map: map,
+            title: title
+        });
+        markers.push(marker);
+    }
+
+    function removeMarkers() {
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+        markers = [];
+    }
+
+    function handleEnter(e) {
+        if(e.key === 'Enter') findRouteOnMap();
+    }
+
+
     /* =========================================
-       [기능 2] 실제 버스 API 연동 (CORS 우회 적용됨)
+       [기능 3] 실제 버스 데이터 (CORS 우회)
        ========================================= */
-    var busMarkers = []; // 지도에 그려진 버스들을 담아두는 통
+    var busMarkers = []; 
 
     async function getRealBusData() {
         const statusText = document.getElementById('map-status-text');
         
-        // 🚨 [필수] 여기에 공공데이터포털 [Decoding] 인증키를 붙여넣으세요! 🚨
-        const serviceKey = '여기에_인증키를_붙여넣으세요'; 
+        // 🚨 [필수] 여기에 공공데이터포털 [Decoding] 인증키 입력 🚨
+        const serviceKey = '1fe0be0bcba2e3e38d12218b55ae1e841ae702d4290b2b21c9926f38d7c34c1b'; 
         
-        // 부산 33번 버스 노선 ID (고정값)
-        const lineId = '5200033000'; 
-        
-        // [수정됨] 별도 인증 없이 작동하는 안정적인 우회 서버
+        const lineId = '5200033000'; // 33번 버스
         const proxyUrl = 'https://api.allorigins.win/raw?url=';
-        
-        // 요청할 API 주소
         const apiUrl = `http://apis.data.go.kr/6260000/BusanBims/busInfoByRouteId?serviceKey=${serviceKey}&lineId=${lineId}&numOfRows=10&pageNo=1`;
 
         try {
-            statusText.innerText = "📡 버스 데이터 찾는 중...";
-            
-            // 주소 깨짐 방지를 위해 encodeURIComponent 사용
+            statusText.innerText = "📡 버스 데이터 수신 중...";
             const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
+            if (!response.ok) throw new Error("네트워크 오류");
             
-            if (!response.ok) throw new Error("네트워크 오류 발생");
-
             const str = await response.text();
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(str, "text/xml");
 
-            // 결과 메시지 확인 (로그용)
-            const headerMsg = xmlDoc.getElementsByTagName("headerMsg")[0]?.textContent;
-            console.log("API 응답 상태:", headerMsg);
+            // 기존 버스 삭제
+            for(var bm of busMarkers) bm.setMap(null);
+            busMarkers = [];
 
-            // 기존에 그려진 버스 싹 지우기 (새로고침 효과)
-            removeBusMarkers();
-
-            // 버스 데이터 추출
             const items = xmlDoc.getElementsByTagName("item");
             if (!items || items.length === 0) {
-                statusText.innerText = "⚠️ 현재 운행 중인 버스 없음";
-                alert("운행 중인 33번 버스가 없거나, 인증키가 잘못되었습니다.");
+                statusText.innerText = "⚠️ 운행 버스 없음";
+                alert("운행 중인 버스가 없거나 인증키 오류입니다.");
                 return;
             }
 
-            // 지도에 버스 아이콘 하나씩 찍기
             for (let i = 0; i < items.length; i++) {
                 const lat = items[i].getElementsByTagName("lat")[0].textContent;
                 const lng = items[i].getElementsByTagName("lng")[0].textContent;
-                const carNo = items[i].getElementsByTagName("carNo")[0].textContent; // 차량번호
+                const carNo = items[i].getElementsByTagName("carNo")[0].textContent;
 
                 var busPos = new kakao.maps.LatLng(lat, lng);
-                
-                // 파란색 버스 아이콘 이미지
                 var imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/busStop.png', 
                     imageSize = new kakao.maps.Size(24, 35); 
                 var markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
@@ -244,97 +298,40 @@
                     position: busPos,
                     image: markerImage,
                     map: map,
-                    title: carNo // 마우스 올리면 차량번호 뜸
+                    title: carNo
                 });
-
-                busMarkers.push(marker); // 나중에 지우기 위해 저장
+                busMarkers.push(marker);
             }
-
-            statusText.innerText = `🚌 ${items.length}대 운행 중 (실시간)`;
+            statusText.innerText = `🚌 ${items.length}대 운행 중`;
             
-            // 첫 번째 버스 위치로 지도 이동
+            // 첫 번째 버스로 이동
             if(items.length > 0) {
-                const firstLat = items[0].getElementsByTagName("lat")[0].textContent;
-                const firstLng = items[0].getElementsByTagName("lng")[0].textContent;
-                map.panTo(new kakao.maps.LatLng(firstLat, firstLng));
+                 const firstLat = items[0].getElementsByTagName("lat")[0].textContent;
+                 const firstLng = items[0].getElementsByTagName("lng")[0].textContent;
+                 map.panTo(new kakao.maps.LatLng(firstLat, firstLng));
             }
 
         } catch (error) {
             console.error(error);
-            statusText.innerText = "❌ 데이터 오류";
-            alert("데이터를 가져오지 못했습니다. 인증키를 확인해주세요.");
+            alert("버스 데이터를 불러오지 못했습니다. 인증키를 확인하세요.");
         }
     }
 
-    // 지도에서 마커 지우는 함수
-    function removeBusMarkers() {
-        for (var i = 0; i < busMarkers.length; i++) {
-            busMarkers[i].setMap(null);
-        }
-        busMarkers = [];
-    }
 
     /* =========================================
-       [기능 3] 즐겨찾기, 화면 전환 등 UI 로직
+       [기타 UI 로직]
        ========================================= */
-    let favoriteData = { title: "집 → 학교", desc: "33번 버스 이용", start: "집", end: "학교" };
-
     function useFavorite() {
-        document.getElementById('start-input').value = favoriteData.start;
-        document.getElementById('end-input').value = favoriteData.end;
-        alert(`'${favoriteData.title}' 경로가 설정되었습니다.`);
-    }
-
-    function editFavorite(event) {
-        event.stopPropagation(); // 버튼 클릭 시 부모 요소 클릭 방지
-        const newTitle = prompt("즐겨찾기 이름 변경:", favoriteData.title);
-        if(!newTitle) return;
-        const newDesc = prompt("설명 변경:", favoriteData.desc);
-        
-        favoriteData.title = newTitle;
-        if(newDesc) favoriteData.desc = newDesc;
-
-        document.getElementById('fav-title').innerText = favoriteData.title;
-        document.getElementById('fav-desc').innerText = favoriteData.desc;
+        document.getElementById('start-input').value = "냉정역";
+        document.getElementById('end-input').value = "동의대학교";
+        findRouteOnMap(); // 바로 검색 실행
     }
 
     function goToStep(stepNumber) {
-        if(stepNumber === 2) {
-             const startVal = document.getElementById('start-input').value;
-             const endVal = document.getElementById('end-input').value;
-             document.getElementById('route-start-text').textContent = startVal || "출발지";
-             document.getElementById('route-end-text').textContent = endVal || "도착지";
-        }
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         const targetScreen = document.getElementById(`step-${stepNumber}`);
         if(targetScreen) targetScreen.classList.add('active');
     }
-
-    // 자동완성 예시 데이터
-    const mockPlaces = ["냉정역 2호선", "서면역 1호선", "부산역", "동의대", "가야공원", "주례역", "사상역"];
-    function filterPlaces(inputId, listId) {
-        const input = document.getElementById(inputId);
-        const list = document.getElementById(listId);
-        const filter = input.value;
-        if (!filter) { list.style.display = 'none'; return; }
-        
-        list.innerHTML = "";
-        mockPlaces.filter(p => p.includes(filter)).forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
-            div.innerText = item;
-            div.onclick = () => { input.value = item; list.style.display = 'none'; };
-            list.appendChild(div);
-        });
-        list.style.display = 'block';
-    }
-    
-    // 화면 아무 데나 클릭하면 추천 목록 닫기
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.input-group')) {
-            document.querySelectorAll('.suggestion-list').forEach(el => el.style.display = 'none');
-        }
-    });
 </script>
 
 </body>
