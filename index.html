@@ -65,21 +65,31 @@
 <script type="text/javascript" src="https://dapi.kakao.com/v2/s/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
-    /* -------------------------------------------
-       [1] 초기화 및 변수 설정
+/* -------------------------------------------
+       [1] 초기화 및 변수 설정 (수정됨)
        ------------------------------------------- */
-    const Container = document.getElementById('');
-    const Option = { center: new kakao.s.LatLng(37.566826, 126.9786567), level: 7 };
-    const  = new kakao.s.(Container, Option);
-    const ps = new kakao.s.services.Places();
+    // 1. HTML에 있는 id="map"을 가져옵니다.
+    const mapContainer = document.getElementById('map'); 
+    
+    // 2. 'kakao.s'는 오타입니다. 'kakao.maps'가 맞습니다.
+    const mapOption = { 
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), 
+        level: 7 
+    };
+
+    // 3. 변수 이름(map)이 빠져 있었습니다. (const = ... -> const map = ...)
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+    
+    // 4. 장소 검색 객체 생성
+    const ps = new kakao.maps.services.Places();
     
     let markers = [];
     let polylines = [];
     let isTrafficOn = false;
 
-    // ★★★ [필수] T App Key 입력 (SK Open API) ★★★
-    // https://tapi.sktelecom.com/ 에서 발급받은 'App Key'를 넣으세요.
-    const T_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
+    // ★★★ [필수] TMAP App Key (SK Open API) ★★★
+    // 입력하신 키가 정상적으로 적용되었습니다.
+    const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti';
 
     window.onload = () => moveToCurrentLocation();
 
