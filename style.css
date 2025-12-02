@@ -1,134 +1,146 @@
-/* [Global Reset & Font] */
+/* [Global Reset & High-End Fonts] */
 :root {
-    --primary: #6A67CE;       /* 메인 보라색 */
-    --primary-dark: #5a57b0;  
-    --accent: #FF6B6B;        /* 강조색 (도착, 위험) */
-    --bus-blue: #3b5f9e;      /* 부산 버스 색상 */
-    --text-main: #191F28;     /* 진한 검정 (가독성) */
-    --text-sub: #8B95A1;      /* 연한 회색 */
-    --bg-base: #F2F4F6;       /* 배경색 */
-    --white: #ffffff;
-    --shadow: 0 4px 20px rgba(0,0,0,0.08); /* 부드러운 그림자 */
+    --primary: #4A8CFF;       /* 신뢰감을 주는 앱 블루 */
+    --primary-dark: #3668c9;
+    --accent: #FF4F4F;        /* 긴급/도착 강조 레드 */
+    --bus-color: #3396FF;     /* 간선버스 파랑 */
+    --text-main: #1C1C1E;     /* Apple 스타일 블랙 */
+    --text-sub: #8E8E93;      /* Apple 스타일 그레이 */
+    --bg-glass: rgba(255, 255, 255, 0.85); /* 글래스모피즘 배경 */
+    --shadow-soft: 0 8px 30px rgba(0,0,0,0.12);
+    --shadow-sharp: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 body {
     margin: 0; padding: 0;
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-    background-color: #dfe2e6;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    background-color: #f2f2f7;
     display: flex; justify-content: center; align-items: center;
-    height: 100vh;
+    height: 100vh; overflow: hidden;
 }
 
-.app-container {
-    width: 100%; max-width: 390px; height: 100vh; max-height: 844px; /* 아이폰 사이즈 기준 */
-    background-color: var(--white);
-    position: relative; overflow: hidden;
-    border-radius: 40px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-    display: flex; flex-direction: column;
-}
-
-/* [지도 영역 디자인] */
-.top-map-area {
-    flex: 1; /* 남은 공간 모두 차지 */
+.app-frame {
+    width: 100%; max-width: 430px; height: 100%; /* 아이폰 프로 맥스 기준 */
+    background-color: white;
     position: relative;
-    background-color: #eef2f5;
-}
-
-/* ✨ [NEW] 현대적인 시계 UI (Glassmorphism) */
-.glass-clock {
-    position: absolute; top: 50px; left: 20px; z-index: 20;
-    background: rgba(255, 255, 255, 0.85); /* 반투명 배경 */
-    backdrop-filter: blur(12px); /* 블러 효과 */
-    padding: 8px 16px; 
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700; color: var(--text-main); font-size: 14px;
-    border: 1px solid rgba(255,255,255,0.5);
-}
-.glass-clock span { font-variant-numeric: tabular-nums; } /* 숫자 간격 일정하게 */
-
-/* [NEW] 버스 보기 버튼 (플로팅 버튼 스타일) */
-.fab-btn {
-    position: absolute; top: 50px; right: 20px; z-index: 20;
-    background: var(--white);
-    color: var(--text-main);
-    border: none; padding: 8px 14px; border-radius: 20px;
-    font-size: 13px; font-weight: 700;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; gap: 6px;
-}
-.fab-btn:active { transform: scale(0.95); }
-.fab-btn.active { background-color: var(--bus-blue); color: white; }
-
-/* 지도 상태 메시지 (토스트 팝업 스타일) */
-.map-toast {
-    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-    background: rgba(25, 31, 40, 0.9); /* 진한 배경 */
-    color: white; padding: 12px 24px; border-radius: 30px;
-    font-size: 14px; font-weight: 600; z-index: 20;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    white-space: nowrap;
-    opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
-.map-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* [하단 콘텐츠 영역] */
-.bottom-sheet {
-    background: var(--white);
-    border-top-left-radius: 30px; border-top-right-radius: 30px;
-    padding: 30px 24px;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.05);
-    position: relative; z-index: 30;
-    min-height: 35%; /* 기본 높이 확보 */
+    box-shadow: 0 0 50px rgba(0,0,0,0.1);
     display: flex; flex-direction: column;
 }
 
-/* 화면 전환 애니메이션 */
-.screen { display: none; flex-direction: column; height: 100%; animation: fadeIn 0.4s ease; }
-.screen.active { display: flex; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* 텍스트 스타일 */
-.title { font-size: 22px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; }
-.sub-text { font-size: 14px; color: var(--text-sub); }
-
-/* 입력창 디자인 */
-.input-wrap {
-    background: var(--bg-base); border-radius: 16px;
-    padding: 16px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 12px;
-    transition: box-shadow 0.2s;
+/* [지도 영역 - Full Screen] */
+.map-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0;
 }
-.input-wrap:focus-within { box-shadow: 0 0 0 2px var(--primary); background: white; }
-.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot.blue { background: #3da4ff; }
-.dot.red { background: var(--accent); }
-.input-wrap input { 
-    border: none; background: transparent; outline: none; 
-    font-size: 16px; width: 100%; font-weight: 500; color: var(--text-main);
-}
-.input-wrap input::placeholder { color: #b0b8c1; }
 
-/* 버튼 디자인 */
-.btn-main {
-    background: var(--primary); color: white;
-    width: 100%; padding: 18px; border: none; border-radius: 18px;
-    font-size: 16px; font-weight: 700; cursor: pointer;
-    margin-top: auto; box-shadow: 0 4px 12px rgba(106, 103, 206, 0.3);
-    transition: transform 0.1s;
+/* [상단 Floating UI] */
+.top-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 50px 20px 10px 20px; /* 노치 영역 고려 */
+    z-index: 10;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; /* 지도를 클릭할 수 있게 터치 통과 */
 }
-.btn-main:active { transform: scale(0.98); }
 
-/* 타임라인 디자인 (경로 결과) */
-.timeline-item { display: grid; grid-template-columns: 50px 1fr; gap: 10px; margin-bottom: 5px; }
-.t-time { font-size: 13px; font-weight: 700; color: var(--text-main); text-align: right; }
-.t-line-col { display: flex; flex-direction: column; align-items: center; }
-.t-dot { width: 10px; height: 10px; border-radius: 50%; border: 3px solid #ddd; background: white; z-index: 1;}
-.t-dot.active { border-color: var(--primary); background: var(--primary); }
-.t-line { width: 2px; flex: 1; background: #ddd; margin: 4px 0; min-height: 20px;}
-.t-content { padding-bottom: 20px; }
-.t-place { font-size: 16px; font-weight: 700; color: var(--text-main); }
-.t-desc { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+/* 시계 위젯 (Glass Effect) */
+.widget-clock {
+    pointer-events: auto;
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 8px 16px; border-radius: 24px;
+    box-shadow: var(--shadow-sharp);
+    display: flex; flex-direction: column; align-items: flex-start;
+}
+.clock-time { font-size: 26px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; line-height: 1; }
+.clock-date { font-size: 12px; font-weight: 600; color: var(--text-sub); margin-top: 4px; }
+
+/* 버스 모드 스위치 */
+.widget-toggle {
+    pointer-events: auto;
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    padding: 10px; border-radius: 50%;
+    box-shadow: var(--shadow-sharp);
+    border: none; cursor: pointer;
+    width: 48px; height: 48px;
+    display: flex; justify-content: center; align-items: center;
+    transition: transform 0.2s, background 0.2s;
+}
+.widget-toggle:active { transform: scale(0.9); }
+.widget-toggle.active { background: var(--primary); color: white; }
+.widget-toggle svg { width: 24px; height: 24px; fill: currentColor; }
+
+/* [하단 Bottom Sheet - 인터랙션 핵심] */
+.bottom-sheet {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top-left-radius: 32px; border-top-right-radius: 32px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    z-index: 20;
+    padding: 32px 24px 40px 24px;
+    transform: translateY(0);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 45%;
+    display: flex; flex-direction: column;
+}
+
+/* 핸들바 (Drag Indicator) */
+.sheet-handle {
+    width: 40px; height: 5px; background: #E5E5EA;
+    border-radius: 10px; margin: -15px auto 25px auto;
+}
+
+/* 입력 폼 스타일 */
+.search-container { display: flex; flex-direction: column; gap: 16px; }
+
+.input-row {
+    display: flex; align-items: center; gap: 14px;
+    background: #F2F2F7; padding: 16px; border-radius: 18px;
+    transition: background 0.2s;
+}
+.input-row:focus-within { background: #fff; box-shadow: 0 0 0 2px var(--primary); }
+
+.icon-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.icon-dot.start { background: var(--primary); border: 3px solid #D4E3FF; }
+.icon-dot.end { background: var(--accent); border: 3px solid #FFD4D4; }
+
+.input-field {
+    border: none; background: transparent; outline: none;
+    font-size: 17px; font-weight: 600; color: var(--text-main); width: 100%;
+}
+.input-field::placeholder { color: #AEAEB2; font-weight: 500; }
+
+/* 메인 버튼 (그라디언트) */
+.btn-cta {
+    margin-top: 24px;
+    background: linear-gradient(135deg, #4A8CFF, #2866D8);
+    color: white; border: none;
+    width: 100%; padding: 18px; border-radius: 20px;
+    font-size: 17px; font-weight: 700;
+    box-shadow: 0 10px 20px rgba(74, 140, 255, 0.3);
+    cursor: pointer;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+}
+.btn-cta:active { transform: scale(0.98); }
+
+/* [결과 화면 UI] */
+.result-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+.result-title { font-size: 28px; font-weight: 800; color: var(--text-main); }
+.result-sub { font-size: 15px; font-weight: 600; color: var(--primary); }
+
+.route-info { display: flex; gap: 20px; align-items: center; }
+.route-time { font-size: 15px; font-weight: 700; color: var(--text-main); min-width: 45px; }
+.route-visual { flex: 1; height: 4px; background: #E5E5EA; border-radius: 2px; position: relative; }
+.route-progress { 
+    position: absolute; left: 0; top: 0; height: 100%; 
+    background: var(--primary); border-radius: 2px; width: 0%;
+    transition: width 1s linear; 
+}
+.route-bus-icon {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    font-size: 20px; transition: left 1s linear;
+}
+
+/* 유틸리티 */
+.hidden { display: none; }
