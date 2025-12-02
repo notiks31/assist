@@ -1,85 +1,25 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Transit Pro</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<div class="app-frame">
-    <div id="map"></div>
-
-    <div class="floating-menu" id="floatingMenu">
-        <button class="menu-item" onclick="toggleTraffic()" title="교통상황">🚦</button>
-        <button class="menu-item" onclick="moveToCurrentLocation()" title="내 위치">📍</button>
-        <button class="toggle-btn" onclick="toggleMenu()">
-            <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
-        </button>
-    </div>
-
-    <div class="bottom-sheet collapsed" id="bottomSheet">
-        <div class="sheet-header" onclick="toggleSheet()">
-            <div class="handle-bar"></div>
-        </div>
-
-        <div class="sheet-content">
-            <div class="search-bar" onclick="expandSheet()">
-                <span style="font-size:18px">🔍</span>
-                <span style="color:#adb5bd; font-weight:500;">어디로 갈까요?</span>
-            </div>
-
-            <div class="search-form">
-                <div class="input-row">
-                    <div class="dot start"></div>
-                    <input type="text" id="startInput" class="input-text" placeholder="출발지 (예: 서울역)">
-                </div>
-                <div class="input-row">
-                    <div class="dot end"></div>
-                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 홍대입구)">
-                </div>
-                <div style="display:flex; gap:8px; margin:12px 0;">
-                    <button class="pill" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
-                    <button class="pill" onclick="fillSearch('현위치', '회사')">🏢 회사로</button>
-                </div>
-                <button class="btn-search" onclick="runHybridSearch()">대중교통 경로 검색</button>
-            </div>
-
-            <div id="resultCard" class="result-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="time-info" id="totalTime">00분</div>
-                    <button class="pill" onclick="resetSearch()">다시 검색</button>
-                </div>
-                <div class="sub-info" id="routeSummary">경로 계산 중...</div>
-
-                <div class="timeline" id="routeTimeline"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
     /* -------------------------------------------
-       [1] 초기화 (카카오맵 엔진)
+       [1] 설정 및 초기화
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
     const mapOption = { 
-        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 중심
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 초기 서울 중심
         level: 6 
     };
     const map = new kakao.maps.Map(mapContainer, mapOption);
     const ps = new kakao.maps.services.Places(); 
     
-    // ★ 중요 2: TMAP API 키 입력 (경로 데이터용) ★
+    // ★ TMAP API 키 (데이터용) ★
     const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
     let polylines = [];
     let markers = [];
     let isTrafficOn = false;
 
+    // 로딩 시 내 위치로 이동
     window.onload = () => moveToCurrentLocation();
 
     /* -------------------------------------------
@@ -91,7 +31,7 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-                // HTML 마커 대신 가벼운 CustomOverlay (렉 방지)
+                // 내 위치 마커
                 const content = `<div style="width:20px; height:20px; background:#3182F6; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
                 const overlay = new kakao.maps.CustomOverlay({ map: map, position: loc, content: content });
                 markers.push(overlay);
@@ -146,13 +86,16 @@
         const eVal = document.getElementById('endInput').value;
         if(!sVal || !eVal) return alert('출발/도착지를 입력하세요');
 
+        // 1. 카카오 API로 장소 -> 좌표 변환
         const sCoord = await getKakaoCoords(sVal);
         const eCoord = await getKakaoCoords(eVal);
         
-        if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
+        if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다. (정확한 명칭을 입력해주세요)");
 
+        // 2. TMAP API로 경로 데이터 가져오기 & 그리기
         await fetchTmapDataAndRender(sCoord, eCoord);
 
+        // 3. UI 업데이트
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
     }
@@ -173,9 +116,9 @@
         });
     }
 
-    // ★ [수정됨] CORS 자동 우회 프록시 사용 ★
+    // TMAP 데이터 요청 -> 카카오 지도에 그리기
     async function fetchTmapDataAndRender(start, end) {
-        // 기존 cors-anywhere 대신 'corsproxy.io' 사용 (버튼 클릭 필요 없음)
+        // [수정] 최신 우회 서버 사용
         const proxy = 'https://corsproxy.io/?'; 
         const url = "https://apis.openapi.sk.com/transit/routes";
         
@@ -191,18 +134,13 @@
         try {
             const response = await fetch(targetUrl, {
                 method: "POST",
-                headers: { 
-                    "appKey": TMAP_APP_KEY, 
-                    "Content-Type": "application/json" 
-                },
+                headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                // 에러 발생 시 상세 내용 확인
-                const errText = await response.text();
-                console.error("TMAP Error:", errText);
-                throw new Error("API 호출 실패");
+                console.error("TMAP API Error:", await response.text());
+                throw new Error("경로를 불러올 수 없습니다.");
             }
 
             const data = await response.json();
@@ -220,7 +158,7 @@
             document.getElementById('totalTime').innerText = `${totalTime}분`;
             document.getElementById('routeSummary').innerText = `요금 ${totalFare}원 • 환승 ${itinerary.transferCount}회`;
 
-            // 맵 초기화
+            // 초기화
             polylines.forEach(p => p.setMap(null)); polylines = [];
             markers.forEach(m => m.setMap(null)); markers = [];
 
@@ -228,7 +166,7 @@
             addMarker(start.lat, start.lng, 'start');
             addMarker(end.lat, end.lng, 'end');
 
-            // 타임라인
+            // 타임라인 생성
             const timelineBox = document.getElementById('routeTimeline');
             timelineBox.innerHTML = '';
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
@@ -238,22 +176,26 @@
             const bounds = new kakao.maps.LatLngBounds(); 
 
             legs.forEach(leg => {
+                // [수정] passShape가 있는 경우에만 그리기 (에러 방지)
                 if (leg.passShape) {
                     const path = parseTmapShapeToKakao(leg.passShape);
                     
-                    const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
-                    const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
-                    const weight = leg.mode === 'WALK' ? 5 : 7; 
+                    // path가 유효할 때만 그리기
+                    if (path.length > 0) {
+                        const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
+                        const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
+                        const weight = leg.mode === 'WALK' ? 5 : 7; 
 
-                    const polyline = new kakao.maps.Polyline({
-                        path: path, strokeWeight: weight, strokeColor: color,
-                        strokeOpacity: 0.9, strokeStyle: style
-                    });
-                    polyline.setMap(map);
-                    polylines.push(polyline);
-                    
-                    bounds.extend(path[0]);
-                    bounds.extend(path[path.length-1]);
+                        const polyline = new kakao.maps.Polyline({
+                            path: path, strokeWeight: weight, strokeColor: color,
+                            strokeOpacity: 0.9, strokeStyle: style
+                        });
+                        polyline.setMap(map);
+                        polylines.push(polyline);
+                        
+                        bounds.extend(path[0]);
+                        bounds.extend(path[path.length-1]);
+                    }
                 }
 
                 if (leg.mode === 'BUS' || leg.mode === 'SUBWAY') {
@@ -270,11 +212,17 @@
 
         } catch (e) {
             console.error(e);
-            alert("경로를 찾을 수 없습니다. (콘솔 확인 필요)");
+            alert("경로 검색 중 오류가 발생했습니다.");
         }
     }
 
+    // [핵심 수정] 에러 방지용 파싱 함수
     function parseTmapShapeToKakao(passShape) {
+        // 데이터가 문자열이 아니면 빈 배열 반환 (에러 차단)
+        if (!passShape || typeof passShape !== 'string') {
+            return [];
+        }
+
         const coords = passShape.split(' ');
         return coords.map(c => {
             const [lng, lat] = c.split(',');
@@ -290,7 +238,7 @@
         markers.push(marker);
     }
 
-    function addTimelineItem(container, type, title, desc) {
+    function addTimelineItem(container, type, title, desc = "") {
         let dotClass = 't-dot walk';
         let colorStyle = '';
         if(type === 'bus') { dotClass = 't-dot bus'; colorStyle = 'color:#3182F6;'; }
@@ -304,6 +252,3 @@
         container.insertAdjacentHTML('beforeend', html);
     }
 </script>
-
-</body>
-</html>
