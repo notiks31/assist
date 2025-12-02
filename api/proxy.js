@@ -12,15 +12,15 @@ export default async function handler(req, res) {
         return;
     }
 
-    // 3. TMAP API 키를 환경 변수에서 안전하게 가져옵니다. (수정된 부분)
+    // 3. TMAP API 키를 Vercel 환경 변수에서 가져옵니다.
     const TMAP_APP_KEY = process.env.TMAP_KEY; 
 
     if (!TMAP_APP_KEY) {
-        // 키가 없으면 403 Forbidden 대신 500 서버 오류 반환
         return res.status(500).json({ error: "서버 오류: TMAP_KEY 환경 변수가 설정되지 않았거나 불러올 수 없습니다." });
     }
 
     try {
+        // 4. 클라이언트(HTML)에서 보낸 좌표 데이터 받기
         const { startX, startY, endX, endY } = req.body;
         const tmapUrl = "https://apis.openapi.sk.com/transit/routes";
         
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
             count: 1, format: "json"
         };
 
-        // 4. TMAP 서버로 요청 보내기
+        // 5. TMAP 서버로 요청 보내기
         const response = await fetch(tmapUrl, {
             method: "POST",
             headers: { 
@@ -40,16 +40,15 @@ export default async function handler(req, res) {
             body: JSON.stringify(payload)
         });
 
-        // 5. TMAP API 응답 상태 확인
+        // 6. TMAP API 응답 상태 확인
         if (!response.ok) {
              const errorText = await response.text();
-             // TMAP API에서 온 에러 그대로 반환
              return res.status(response.status).json({ error: "TMAP API 호출 실패", details: errorText });
         }
 
         const data = await response.json();
 
-        // 6. 결과를 프런트엔드로 돌려주기
+        // 7. 결과를 프런트엔드로 돌려주기
         res.status(200).json(data);
 
     } catch (error) {
