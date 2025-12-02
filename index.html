@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Transit Map</title>
+    <title>Hybrid Map (Ready)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -59,7 +59,7 @@
     </div>
 </div>
 
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=여기에_카카오_자바스크립트_키_붙여넣기&libraries=services"></script>
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
     /* -------------------------------------------
@@ -67,14 +67,14 @@
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
     const mapOption = { 
-        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 중심
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), 
         level: 6 
     };
     const map = new kakao.maps.Map(mapContainer, mapOption);
-    const ps = new kakao.maps.services.Places(); // 카카오 장소 검색 객체
+    const ps = new kakao.maps.services.Places(); 
     
-    // ★ 2. TMAP API 키 (데이터 계산용) ★
-    const TMAP_APP_KEY = '여기에_TMAP_APP_KEY를_넣으세요'; 
+    // ✅ TMAP API 키 적용됨 (아까 주신 키: vLTl0...)
+    const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
     let polylines = [];
     let markers = [];
@@ -91,7 +91,6 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-                // HTML 마커 대신 가벼운 CustomOverlay (렉 방지)
                 const content = `<div style="width:20px; height:20px; background:#3182F6; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
                 new kakao.maps.CustomOverlay({ map: map, position: loc, content: content });
                 map.panTo(loc);
@@ -138,20 +137,20 @@
     }
 
     /* -------------------------------------------
-       [4] 핵심: 하이브리드 검색 (Kakao + TMAP)
+       [4] 하이브리드 검색 (Kakao 장소 -> TMAP 경로 -> Kakao 그리기)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
         const eVal = document.getElementById('endInput').value;
         if(!sVal || !eVal) return alert('출발/도착지를 입력하세요');
 
-        // 1. 카카오 API로 '장소' 검색 -> 좌표 확보
+        // 1. 카카오 API로 장소 -> 좌표 변환
         const sCoord = await getKakaoCoords(sVal);
         const eCoord = await getKakaoCoords(eVal);
         
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
-        // 2. TMAP API로 '대중교통 경로' 데이터 확보
+        // 2. TMAP API로 경로 데이터 가져오기 & 그리기
         await fetchTmapTransitAndRender(sCoord, eCoord);
 
         // 3. UI 업데이트
@@ -196,57 +195,47 @@
             
             const itinerary = data.metaData.plan.itineraries[0];
             
-            // 결과 텍스트 업데이트
             const totalTime = Math.round(itinerary.totalTime / 60);
             const totalFare = itinerary.fare.regular.totalFare;
             document.getElementById('totalTime').innerText = `${totalTime}분`;
             document.getElementById('routeSummary').innerText = `요금 ${totalFare}원 • 환승 ${itinerary.transferCount}회`;
 
-            // 맵 초기화
+            // 초기화
             polylines.forEach(p => p.setMap(null)); polylines = [];
             markers.forEach(m => m.setMap(null)); markers = [];
 
-            // 마커 (출발/도착)
+            // 마커
             addMarker(start.lat, start.lng, 'start');
             addMarker(end.lat, end.lng, 'end');
 
-            // 타임라인 생성 준비
+            // 타임라인
             const timelineBox = document.getElementById('routeTimeline');
             timelineBox.innerHTML = '';
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
 
-            // ★ 경로 그리기 (TMAP Data -> Kakao Map) ★
+            // 경로 그리기
             const legs = itinerary.legs;
             const bounds = new kakao.maps.LatLngBounds(); 
 
             legs.forEach(leg => {
-                // 선 그리기 (LineString)
                 if (leg.passShape) {
-                    // TMAP 문자열 좌표 -> 카카오 LatLng 객체로 변환
                     const path = parseTmapShapeToKakao(leg.passShape);
                     
-                    // 스타일 결정 (도보 vs 버스/지하철)
                     const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
                     const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
                     const weight = leg.mode === 'WALK' ? 5 : 7; 
 
-                    // 카카오 폴리라인 생성
                     const polyline = new kakao.maps.Polyline({
-                        path: path,
-                        strokeWeight: weight,
-                        strokeColor: color,
-                        strokeOpacity: 0.9,
-                        strokeStyle: style
+                        path: path, strokeWeight: weight, strokeColor: color,
+                        strokeOpacity: 0.9, strokeStyle: style
                     });
                     polyline.setMap(map);
                     polylines.push(polyline);
                     
-                    // 지도 범위 계산
                     bounds.extend(path[0]);
                     bounds.extend(path[path.length-1]);
                 }
 
-                // 타임라인 추가
                 if (leg.mode === 'BUS' || leg.mode === 'SUBWAY') {
                     const time = Math.round(leg.sectionTime / 60);
                     addTimelineItem(timelineBox, 'bus', `${leg.route} 승차`, `${time}분 이동`);
@@ -257,7 +246,7 @@
             });
 
             addTimelineItem(timelineBox, 'walk', '도착', end.name);
-            map.setBounds(bounds); // 지도 뷰포트 자동 맞춤
+            map.setBounds(bounds);
 
         } catch (e) {
             console.error(e);
@@ -265,13 +254,11 @@
         }
     }
 
-    // ★ 핵심: TMAP 좌표 문자열을 카카오 LatLng로 변환 ★
+    // TMAP 좌표 -> 카카오 객체 변환
     function parseTmapShapeToKakao(passShape) {
-        // TMAP: "경도,위도 경도,위도 ..." (문자열)
         const coords = passShape.split(' ');
         return coords.map(c => {
             const [lng, lat] = c.split(',');
-            // Kakao: new LatLng(위도, 경도) (객체)
             return new kakao.maps.LatLng(lat, lng);
         });
     }
