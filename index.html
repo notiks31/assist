@@ -3,23 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Transit Pro (Navi)</title>
+    <title>Hybrid Transit Pro (Fix)</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* [추가] 모의 주행 중일 때 버스 아이콘 스타일 */
-        .moving-bus {
-            width: 40px; height: 40px;
-            background: white; border: 3px solid #3182F6; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 20px; box-shadow: 0 4px 15px rgba(49, 130, 246, 0.4);
-            z-index: 1000; transition: transform 0.1s linear; /* 부드러운 이동 */
-        }
-        /* 안내 종료 버튼 스타일 */
-        .stop-nav-btn {
-            background: #FF3B30 !important; /* 빨간색 */
-            display: none; /* 평소엔 숨김 */
-        }
-    </style>
 </head>
 <body>
 
@@ -52,11 +37,11 @@
                 </div>
                 <div class="input-row">
                     <div class="dot end"></div>
-                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 홍대입구)">
+                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 강남역)">
                 </div>
                 <div style="display:flex; gap:8px; margin:12px 0;">
                     <button class="pill" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
-                    <button class="pill" onclick="fillSearch('서울역', '롯데월드')">🎡 놀러가기</button>
+                    <button class="pill" onclick="fillSearch('서울역', '홍대입구')">🚇 지하철</button>
                 </div>
                 <button class="btn-search" onclick="runHybridSearch()">대중교통 경로 검색</button>
             </div>
@@ -68,11 +53,6 @@
                 </div>
                 <div class="sub-info" id="routeSummary">경로 계산 중...</div>
 
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    <button class="btn-search" id="btnStartNav" onclick="startNavigation()" style="background:#3182F6; flex:1;">▶ 모의 주행 시작</button>
-                    <button class="btn-search stop-nav-btn" id="btnStopNav" onclick="stopNavigation()" style="flex:1;">⏹ 안내 종료</button>
-                </div>
-
                 <div class="timeline" id="routeTimeline"></div>
             </div>
         </div>
@@ -83,23 +63,24 @@
 
 <script>
     /* -------------------------------------------
-       [1] 초기화
+       [1] 초기화 (안전장치 추가)
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
-    const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 6 };
+    const mapOption = { 
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), 
+        level: 6 
+    };
     const map = new kakao.maps.Map(mapContainer, mapOption);
     const ps = new kakao.maps.services.Places(); 
     
-    // ★ TMAP 키 (데이터용)
+    // TMAP API 키
     const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
     let polylines = [];
     let markers = [];
-    let fullPathCoordinates = []; // [추가] 전체 경로 좌표 저장용 (애니메이션용)
-    let naviOverlay = null;       // [추가] 움직이는 버스 오버레이
-    let naviInterval = null;      // [추가] 애니메이션 타이머
     let isTrafficOn = false;
 
+    // 로딩 완료 후 지도 사이즈 재조정 (깨짐 방지)
     window.onload = () => {
         map.relayout();
         moveToCurrentLocation();
@@ -127,9 +108,6 @@
         else { map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC); isTrafficOn = true; }
     }
 
-    /* -------------------------------------------
-       [3] 시트 및 검색 로직
-       ------------------------------------------- */
     const sheet = document.getElementById('bottomSheet');
     const resultCard = document.getElementById('resultCard');
     const searchForm = document.querySelector('.search-form');
@@ -150,22 +128,20 @@
         expandSheet();
     }
     function resetSearch() {
-        stopNavigation(); // 안내 중단
         clearMapData();
         resultCard.classList.remove('active');
         searchForm.style.display = 'block';
         collapseSheet();
-        map.setLevel(6);
+        map.setLevel(6); // 줌 레벨 초기화
     }
-    
+
     function clearMapData() {
         polylines.forEach(p => p.setMap(null)); polylines = [];
         markers.forEach(m => m.setMap(null)); markers = [];
-        fullPathCoordinates = []; // 경로 데이터 초기화
     }
 
     /* -------------------------------------------
-       [4] 하이브리드 검색 & 경로 그리기
+       [3] 하이브리드 검색 (안전장치 강화)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
@@ -181,10 +157,6 @@
 
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
-        
-        // 버튼 상태 초기화
-        document.getElementById('btnStartNav').style.display = 'block';
-        document.getElementById('btnStopNav').style.display = 'none';
     }
 
     function getKakaoCoords(keyword) {
@@ -228,8 +200,6 @@
             }
 
             const itinerary = data.metaData.plan.itineraries[0];
-            
-            // 정보 업데이트
             const totalTime = Math.round(itinerary.totalTime / 60);
             const totalFare = itinerary.fare.regular.totalFare;
             document.getElementById('totalTime').innerText = `${totalTime}분`;
@@ -237,7 +207,7 @@
 
             clearMapData(); // 맵 초기화
 
-            // 마커
+            // 출발/도착 마커
             addMarker(start.lat, start.lng, 'start');
             addMarker(end.lat, end.lng, 'end');
 
@@ -246,15 +216,15 @@
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
 
             const legs = itinerary.legs;
+            // [중요] Bounds 초기화
             const bounds = new kakao.maps.LatLngBounds(); 
+            let hasValidPath = false; // 경로가 하나라도 그려졌는지 확인
 
             legs.forEach(leg => {
                 if (leg.passShape) {
                     const path = parseTmapShapeToKakao(leg.passShape);
                     if (path.length > 0) {
-                        // [추가] 모의 주행을 위해 전체 경로 저장
-                        fullPathCoordinates.push(...path);
-
+                        hasValidPath = true;
                         const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
                         const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
                         const weight = leg.mode === 'WALK' ? 5 : 7; 
@@ -266,6 +236,7 @@
                         polyline.setMap(map);
                         polylines.push(polyline);
                         
+                        // Bounds에는 시작점과 끝점만 추가 (최적화)
                         bounds.extend(path[0]);
                         bounds.extend(path[path.length-1]);
                     }
@@ -282,8 +253,13 @@
 
             addTimelineItem(timelineBox, 'walk', '도착', end.name);
             
-            map.relayout();
-            setTimeout(() => map.setBounds(bounds), 100);
+            // [핵심] 지도 깨짐 방지 로직
+            map.relayout(); // 지도 크기 재계산
+            if (hasValidPath && !bounds.isEmpty()) {
+                setTimeout(() => map.setBounds(bounds), 100); // 약간의 딜레이 후 범위 재설정
+            } else {
+                map.setCenter(new kakao.maps.LatLng(start.lat, start.lng)); // 경로 없으면 출발지로 이동
+            }
 
         } catch (e) {
             console.error(e);
@@ -291,84 +267,19 @@
         }
     }
 
-    /* -------------------------------------------
-       [5] 모의 주행 (Navigation Simulation)
-       ------------------------------------------- */
-    function startNavigation() {
-        if (fullPathCoordinates.length === 0) {
-            alert("경로 데이터가 없습니다.");
-            return;
-        }
-
-        // 버튼 UI 변경
-        document.getElementById('btnStartNav').style.display = 'none';
-        document.getElementById('btnStopNav').style.display = 'block';
-        collapseSheet(); // 지도 잘 보이게 시트 내림
-
-        // 버스 마커 생성 (처음 한 번만)
-        if (!naviOverlay) {
-            const content = `<div class="moving-bus">🚌</div>`;
-            naviOverlay = new kakao.maps.CustomOverlay({
-                map: map,
-                position: fullPathCoordinates[0],
-                content: content,
-                yAnchor: 0.5,
-                zIndex: 9999
-            });
-        }
-
-        let index = 0;
-        const speed = 50; // 이동 속도 (ms) - 작을수록 빠름
-
-        // 기존 타이머 제거
-        if (naviInterval) clearInterval(naviInterval);
-
-        // 주행 루프 시작
-        naviInterval = setInterval(() => {
-            if (index >= fullPathCoordinates.length) {
-                stopNavigation(); // 도착하면 종료
-                alert("목적지에 도착했습니다!");
-                return;
-            }
-
-            const currentPos = fullPathCoordinates[index];
-            naviOverlay.setPosition(currentPos); // 버스 이동
-            map.panTo(currentPos); // 지도 중심 이동 (따라가기)
-
-            index++;
-        }, speed);
-    }
-
-    function stopNavigation() {
-        if (naviInterval) {
-            clearInterval(naviInterval);
-            naviInterval = null;
-        }
-        if (naviOverlay) {
-            naviOverlay.setMap(null);
-            naviOverlay = null;
-        }
-        // 버튼 원복
-        document.getElementById('btnStartNav').style.display = 'block';
-        document.getElementById('btnStopNav').style.display = 'none';
-        
-        // 전체 경로가 보이도록 지도 줌 아웃 (선택 사항)
-        // map.setBounds(bounds); 
-    }
-
-    /* -------------------------------------------
-       [6] 유틸리티
-       ------------------------------------------- */
+    // TMAP 좌표 파싱 (에러 방지)
     function parseTmapShapeToKakao(passShape) {
         if (!passShape || typeof passShape !== 'string') return [];
         const coords = passShape.split(' ');
         return coords.map(c => {
             const [lng, lat] = c.split(',');
+            // parseFloat로 확실하게 숫자로 변환
             return new kakao.maps.LatLng(parseFloat(lat), parseFloat(lng));
         });
     }
 
     function addMarker(lat, lng, type) {
+        // 심플한 HTML 마커
         const content = `<div style="width:14px; height:14px; background:${type==='start'?'#191F28':'#FF3B30'}; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
         const marker = new kakao.maps.CustomOverlay({
             position: new kakao.maps.LatLng(lat, lng),
