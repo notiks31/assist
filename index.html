@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Transit Pro (Mobile)</title>
+    <title>Hybrid Transit Pro (Server)</title>
     <style>
         /* -------------------------------------------
-           [스타일 정의] 모바일 최적화 UI
+           [스타일 정의]
            ------------------------------------------- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #f5f6f8; }
 
-        /* 지도 영역 */
         #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 0; }
 
-        /* 플로팅 메뉴 (우측 상단) */
+        /* 플로팅 메뉴 */
         .floating-menu {
             position: absolute; top: 16px; right: 16px; z-index: 10;
             display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
@@ -35,7 +34,7 @@
         .toggle-btn svg { width: 24px; height: 24px; fill: currentColor; transition: transform 0.3s; }
         .floating-menu.open .toggle-btn svg { transform: rotate(45deg); }
 
-        /* 바텀 시트 (검색창 및 결과) */
+        /* 바텀 시트 */
         .bottom-sheet {
             position: absolute; left: 0; right: 0; bottom: 0; background: white;
             border-top-left-radius: 20px; border-top-right-radius: 20px;
@@ -46,23 +45,19 @@
         .bottom-sheet.collapsed { height: 140px; }
         .bottom-sheet.expanded { height: 80%; }
 
-        /* 핸들바 (드래그 유도) */
         .sheet-header {
             width: 100%; height: 24px; display: flex; justify-content: center; align-items: center;
             flex-shrink: 0; cursor: pointer; background: white;
         }
         .handle-bar { width: 40px; height: 5px; background: #E5E8EB; border-radius: 3px; }
 
-        /* 시트 내부 콘텐츠 */
         .sheet-content { flex: 1; padding: 0 20px 20px; overflow-y: auto; display: flex; flex-direction: column; }
 
-        /* 검색바 (축소 상태일 때 보임) */
         .search-bar {
             width: 100%; height: 50px; background: #F2F4F6; border-radius: 12px;
             display: flex; align-items: center; padding: 0 16px; gap: 10px; cursor: pointer; margin-bottom: 20px; flex-shrink: 0;
         }
 
-        /* 검색 폼 (확장 상태일 때 보임) */
         .search-form { display: block; }
         .input-row { position: relative; margin-bottom: 12px; }
         .input-text {
@@ -83,13 +78,11 @@
             color: #4E5968; border: none; cursor: pointer; font-weight: 600;
         }
 
-        /* 결과 카드 */
         .result-card { display: none; margin-top: 0; flex-direction: column; height: 100%; }
         .result-card.active { display: flex; }
         .time-info { font-size: 26px; font-weight: 800; color: #191F28; margin-bottom: 4px; }
         .sub-info { font-size: 15px; color: #8B95A1; margin-bottom: 20px; }
 
-        /* 타임라인 스타일 */
         .timeline {
             flex: 1; overflow-y: auto; padding-left: 10px; position: relative;
             border-left: 2px solid #E5E8EB; margin-left: 10px;
@@ -173,8 +166,7 @@
     const map = new kakao.maps.Map(mapContainer, mapOption);
     const ps = new kakao.maps.services.Places(); 
     
-    // TMAP API 키
-    const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
+    // TMAP API 키는 서버(Vercel)에 숨겨져 있습니다.
 
     let polylines = [];
     let markers = [];
@@ -210,19 +202,19 @@
     const sheet = document.getElementById('bottomSheet');
     const resultCard = document.getElementById('resultCard');
     const searchForm = document.querySelector('.search-form');
-    const searchBar = document.querySelector('.search-bar'); // 검색바 요소 선택
+    const searchBar = document.querySelector('.search-bar');
 
     function toggleSheet() {
         if(sheet.classList.contains('collapsed')) expandSheet(); else collapseSheet();
     }
     function expandSheet() {
         sheet.classList.remove('collapsed'); sheet.classList.add('expanded');
-        searchBar.style.display = 'none'; // 확장시 검색바 숨김
+        searchBar.style.display = 'none'; 
         if(!resultCard.classList.contains('active')) searchForm.style.display = 'block';
     }
     function collapseSheet() {
         sheet.classList.remove('expanded'); sheet.classList.add('collapsed');
-        searchBar.style.display = 'flex'; // 축소시 검색바 보임
+        searchBar.style.display = 'flex'; 
         document.getElementById('startInput').blur();
     }
     function fillSearch(s, e) {
@@ -244,7 +236,7 @@
     }
 
     /* -------------------------------------------
-       [3] 하이브리드 검색 (ThingProxy 사용)
+       [3] 하이브리드 검색 (내 서버 사용!)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
@@ -256,7 +248,6 @@
         
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
-        // UI 전환
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
         
@@ -279,32 +270,27 @@
     }
 
     async function fetchTmapDataAndRender(start, end) {
-        // 모바일 대응: ThingProxy 사용
-        const proxy = "https://thingproxy.freeboard.io/fetch/";
-        const tmapUrl = "https://apis.openapi.sk.com/transit/routes";
-        const finalUrl = proxy + tmapUrl;
-
+        // 곰돌이님의 Vercel 서버 주소로 연결 (자동 변경 완료)
+        const myServerUrl = "https://assist-iscbvyp7t-notiks-projects.vercel.app/api/proxy"; 
+        
+        // 이제 API 키는 필요 없고, 좌표만 서버로 보냅니다.
         const payload = {
             startX: start.lng, startY: start.lat,
-            endX: end.lng, endY: end.lat,
-            count: 1, format: "json"
+            endX: end.lng, endY: end.lat
         };
 
         try {
-            document.getElementById('routeSummary').innerText = "경로 데이터 수신 중...";
+            document.getElementById('routeSummary').innerText = "서버 경로 수신 중...";
 
-            const response = await fetch(finalUrl, {
+            const response = await fetch(myServerUrl, {
                 method: "POST",
-                headers: { 
-                    "appKey": TMAP_APP_KEY, 
-                    "Content-Type": "application/json" 
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                // ThingProxy 등 공용 프록시는 때때로 실패할 수 있음
-                throw new Error(`API 오류: ${response.status} (중계 서버 불안정 가능성)`);
+                // Vercel 서버 코드(`proxy.js`)에 문제가 있거나, 배포가 안 됐을 수 있습니다.
+                throw new Error(`서버 오류 (${response.status}): Vercel 배포 상태를 확인하세요.`);
             }
 
             const data = await response.json();
@@ -374,7 +360,7 @@
 
         } catch (e) {
             console.error(e);
-            alert(`서버 연결 실패. 잠시 후 다시 시도해주세요.\n(원인: ${e.message})`);
+            alert(`오류 발생: ${e.message}`);
             document.getElementById('routeSummary').innerText = "연결 실패";
         }
     }
