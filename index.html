@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Map Pro</title>
+    <title>Hybrid Transit Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
     <div id="map"></div>
 
     <div class="floating-menu" id="floatingMenu">
-        <button class="menu-btn" onclick="toggleTraffic()">🚦</button>
-        <button class="menu-btn" onclick="moveToCurrentLocation()">📍</button>
+        <button class="menu-item" onclick="toggleTraffic()" title="교통상황">🚦</button>
+        <button class="menu-item" onclick="moveToCurrentLocation()" title="내 위치">📍</button>
         <button class="toggle-btn" onclick="toggleMenu()">
             <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
         </button>
@@ -33,15 +33,15 @@
             <div class="search-form">
                 <div class="input-row">
                     <div class="dot start"></div>
-                    <input type="text" id="startInput" class="input-text" placeholder="출발지 (예: 강남역)">
+                    <input type="text" id="startInput" class="input-text" placeholder="출발지 (예: 서울역)">
                 </div>
                 <div class="input-row">
                     <div class="dot end"></div>
-                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 잠실역)">
+                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 홍대입구)">
                 </div>
                 <div style="display:flex; gap:8px; margin:12px 0;">
                     <button class="pill" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
-                    <button class="pill" onclick="fillSearch('서울역', '홍대입구')">🚇 지하철</button>
+                    <button class="pill" onclick="fillSearch('현위치', '회사')">🏢 회사로</button>
                 </div>
                 <button class="btn-search" onclick="runHybridSearch()">대중교통 경로 검색</button>
             </div>
@@ -63,14 +63,17 @@
 
 <script>
     /* -------------------------------------------
-       [1] 설정 및 초기화
+       [1] 초기화 (카카오맵 엔진)
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
-    const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 6 };
+    const mapOption = { 
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 중심
+        level: 6 
+    };
     const map = new kakao.maps.Map(mapContainer, mapOption);
-    const ps = new kakao.maps.services.Places();
+    const ps = new kakao.maps.services.Places(); 
     
-    // ★ 중요: TMAP API 키 (데이터용)
+    // ★ 중요 2: TMAP API 키 입력 (경로 데이터용) ★
     const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
     let polylines = [];
@@ -80,7 +83,7 @@
     window.onload = () => moveToCurrentLocation();
 
     /* -------------------------------------------
-       [2] UI 로직
+       [2] UI 인터랙션
        ------------------------------------------- */
     function toggleMenu() { document.getElementById('floatingMenu').classList.toggle('open'); }
 
@@ -88,6 +91,7 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+                // HTML 마커 대신 가벼운 CustomOverlay (렉 방지)
                 const content = `<div style="width:20px; height:20px; background:#3182F6; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
                 const overlay = new kakao.maps.CustomOverlay({ map: map, position: loc, content: content });
                 markers.push(overlay);
@@ -102,20 +106,23 @@
     }
 
     /* -------------------------------------------
-       [3] 시트 로직
+       [3] 시트 및 검색 로직
        ------------------------------------------- */
     const sheet = document.getElementById('bottomSheet');
     const resultCard = document.getElementById('resultCard');
     const searchForm = document.querySelector('.search-form');
 
     function toggleSheet() {
-        if(sheet.classList.contains('collapsed')) expandSheet(); else collapseSheet();
+        if(sheet.classList.contains('collapsed')) expandSheet();
+        else collapseSheet();
     }
     function expandSheet() {
-        sheet.classList.remove('collapsed'); sheet.classList.add('expanded');
+        sheet.classList.remove('collapsed');
+        sheet.classList.add('expanded');
     }
     function collapseSheet() {
-        sheet.classList.remove('expanded'); sheet.classList.add('collapsed');
+        sheet.classList.remove('expanded');
+        sheet.classList.add('collapsed');
         document.getElementById('startInput').blur();
     }
     function fillSearch(s, e) {
@@ -132,27 +139,25 @@
     }
 
     /* -------------------------------------------
-       [4] 핵심: 하이브리드 길찾기 (Kakao View + TMAP Data)
+       [4] 핵심: 하이브리드 경로 검색
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
         const eVal = document.getElementById('endInput').value;
         if(!sVal || !eVal) return alert('출발/도착지를 입력하세요');
 
-        // 1. 카카오 API로 좌표 변환
         const sCoord = await getKakaoCoords(sVal);
         const eCoord = await getKakaoCoords(eVal);
         
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
-        // 2. TMAP API로 경로 가져오기
         await fetchTmapDataAndRender(sCoord, eCoord);
 
-        // 3. UI 업데이트
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
     }
 
+    // 카카오 장소 검색
     function getKakaoCoords(keyword) {
         return new Promise(resolve => {
             if(keyword.includes("현위치")) {
@@ -168,10 +173,10 @@
         });
     }
 
-    // TMAP 데이터 -> 카카오맵 그리기
+    // ★ [수정됨] CORS 자동 우회 프록시 사용 ★
     async function fetchTmapDataAndRender(start, end) {
-        // CORS 우회를 위한 프록시 (필수)
-        const proxy = 'https://cors-anywhere.herokuapp.com/'; 
+        // 기존 cors-anywhere 대신 'corsproxy.io' 사용 (버튼 클릭 필요 없음)
+        const proxy = 'https://corsproxy.io/?'; 
         const url = "https://apis.openapi.sk.com/transit/routes";
         
         const payload = {
@@ -180,20 +185,24 @@
             count: 1, format: "json"
         };
 
+        // 전체 URL을 인코딩해서 프록시 뒤에 붙임
+        const targetUrl = proxy + encodeURIComponent(url);
+
         try {
-            const response = await fetch(proxy + url, {
+            const response = await fetch(targetUrl, {
                 method: "POST",
-                headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
+                headers: { 
+                    "appKey": TMAP_APP_KEY, 
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                // 프록시 인증 필요 시 알림
-                if(response.status === 403 || response.status === 401) {
-                    window.open('https://cors-anywhere.herokuapp.com/corsdemo', '_blank');
-                    return alert("보안 인증이 필요합니다. 새 창의 버튼을 누르고 다시 시도해주세요.");
-                }
-                throw new Error("TMAP API Error");
+                // 에러 발생 시 상세 내용 확인
+                const errText = await response.text();
+                console.error("TMAP Error:", errText);
+                throw new Error("API 호출 실패");
             }
 
             const data = await response.json();
@@ -204,12 +213,14 @@
             }
 
             const itinerary = data.metaData.plan.itineraries[0];
+            
+            // 정보 업데이트
             const totalTime = Math.round(itinerary.totalTime / 60);
             const totalFare = itinerary.fare.regular.totalFare;
             document.getElementById('totalTime').innerText = `${totalTime}분`;
             document.getElementById('routeSummary').innerText = `요금 ${totalFare}원 • 환승 ${itinerary.transferCount}회`;
 
-            // 초기화
+            // 맵 초기화
             polylines.forEach(p => p.setMap(null)); polylines = [];
             markers.forEach(m => m.setMap(null)); markers = [];
 
@@ -222,17 +233,17 @@
             timelineBox.innerHTML = '';
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
 
+            // 경로 그리기
             const legs = itinerary.legs;
-            const bounds = new kakao.maps.LatLngBounds();
+            const bounds = new kakao.maps.LatLngBounds(); 
 
             legs.forEach(leg => {
                 if (leg.passShape) {
-                    // TMAP 좌표 -> 카카오 객체 변환
                     const path = parseTmapShapeToKakao(leg.passShape);
                     
                     const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
                     const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
-                    const weight = leg.mode === 'WALK' ? 5 : 7;
+                    const weight = leg.mode === 'WALK' ? 5 : 7; 
 
                     const polyline = new kakao.maps.Polyline({
                         path: path, strokeWeight: weight, strokeColor: color,
@@ -259,7 +270,7 @@
 
         } catch (e) {
             console.error(e);
-            alert("경로를 찾을 수 없습니다. (CORS Demo 버튼을 확인하세요)");
+            alert("경로를 찾을 수 없습니다. (콘솔 확인 필요)");
         }
     }
 
@@ -279,7 +290,7 @@
         markers.push(marker);
     }
 
-    function addTimelineItem(container, type, title, desc = "") {
+    function addTimelineItem(container, type, title, desc) {
         let dotClass = 't-dot walk';
         let colorStyle = '';
         if(type === 'bus') { dotClass = 't-dot bus'; colorStyle = 'color:#3182F6;'; }
