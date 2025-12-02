@@ -8,13 +8,10 @@
         /* -------------------------------------------
            [스타일 정의]
            ------------------------------------------- */
-        /* 모든 요소에 box-sizing 적용하여 크기 계산 안정화 */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
         
-        /* body, html이 화면 전체를 차지하도록 설정 */
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #f5f6f8; }
 
-        /* 지도 영역: width: 100%와 height: 100%로 모바일 화면 전체를 채움 */
         #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 0; }
 
         /* 플로팅 메뉴 */
@@ -274,7 +271,7 @@
     }
 
     async function fetchTmapDataAndRender(start, end) {
-        // [수정 완료] 이제 정확한 API 엔드포인트 경로를 사용합니다.
+        // [현재 주소] Vercel 배포 주소 + API 경로
         const myServerUrl = "https://assist-jxup4d30i-notiks-projects.vercel.app/api/proxy";
         
         // 이제 API 키는 필요 없고, 좌표만 서버로 보냅니다.
