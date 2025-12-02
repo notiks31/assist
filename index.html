@@ -1,21 +1,498 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-	<meta charset="utf-8"/>
-	<title>Kakao 지도 시작하기</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>환승 어시스트 (Transfer Assist)</title>
+    <style>
+        /* [1. Global Design System] */
+        :root {
+            --primary: #6A67CE; /* 메인 퍼플 (스크린샷 참조) */
+            --bg-gray: #F2F4F6;
+            --text-dark: #222;
+            --text-light: #888;
+            --line-color: #E5E5E5;
+            --danger: #FF6B6B;
+            --success: #2ECC71;
+            --warning: #FFD93D;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Apple SD Gothic Neo', 'Pretendard', '맑은 고딕', sans-serif;
+            background-color: #e9ecef; /* 데스크탑 배경 */
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 스마트폰 프레임 */
+        .app-container {
+            width: 100%; max-width: 375px; height: 812px;
+            background-color: white;
+            position: relative; overflow: hidden;
+            border-radius: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
+        }
+
+        /* [2. Top Map Area] : 상단 지도 (고정, 42%) */
+        .top-map-area {
+            height: 42%;
+            background-color: #eef2f5;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-bar {
+            position: absolute; top: 15px; left: 25px; right: 25px; z-index: 10;
+            display: flex; justify-content: space-between; color: var(--text-dark); font-weight: bold; font-size: 14px;
+            text-shadow: 0 0 2px white;
+        }
+
+        /* 지도 위 동적 텍스트 뱃지 */
+        .map-badge {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: var(--primary); font-weight: bold; background: white;
+            padding: 10px 24px; border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-size: 14px; z-index: 10;
+            display: flex; align-items: center; gap: 6px;
+            white-space: nowrap;
+        }
+
+        /* [3. Bottom Content Area] : 하단 시트 (스크롤, 58%) */
+        .bottom-content-area {
+            flex: 1;
+            background: white;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            margin-top: -20px; /* 지도 위로 살짝 겹침 */
+            padding: 25px;
+            overflow-y: auto;
+            position: relative; z-index: 20;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            display: flex; flex-direction: column;
+        }
+
+        /* [4. Common UI Components] */
+        .screen { display: none; animation: slideUp 0.4s ease; flex-direction: column; height: 100%; }
+        .screen.active { display: flex; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .content-header {
+            font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--text-dark);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .btn {
+            width: 100%; padding: 16px; border: none; border-radius: 16px;
+            font-size: 16px; font-weight: 700; cursor: pointer;
+            margin-top: auto; transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-warning { background-color: var(--warning); color: #333; }
+        .btn-outline { background-color: white; border: 2px solid var(--primary); color: var(--primary); margin-top: 10px; }
+        
+        .input-box {
+            background: var(--bg-gray); padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .input-box input { border: none; background: transparent; outline: none; font-size: 16px; width: 100%; }
+
+        /* [5. Advanced Timeline UI] (스크린샷 디자인 구현) */
+        .timeline-container { display: grid; grid-template-columns: 50px 1fr; gap: 0 15px; }
+        .timeline-left { display: flex; flex-direction: column; align-items: center; position: relative; }
+        .timeline-time { font-size: 13px; color: var(--text-dark); font-weight: bold; margin-bottom: 5px; }
+        .timeline-icon { color: var(--text-dark); font-size: 16px; margin-top: 15px; z-index: 2; background: white;}
+        
+        /* 타임라인 선 */
+        .timeline-line {
+            position: absolute; top: 25px; bottom: -15px; left: 50%;
+            width: 3px; background-color: var(--line-color); transform: translateX(-50%); z-index: 1;
+        }
+        .timeline-line.active { background-color: var(--primary); }
+        
+        /* 타임라인 점 */
+        .timeline-dot {
+            width: 12px; height: 12px; background-color: white;
+            border: 4px solid var(--line-color); border-radius: 50%;
+            position: relative; z-index: 2; margin-top: 5px;
+        }
+        .timeline-dot.active { border-color: var(--primary); background: var(--primary); }
+
+        .timeline-right { padding-bottom: 30px; margin-bottom: 10px; }
+        .location-title { font-size: 16px; font-weight: bold; color: var(--text-dark); }
+        .location-desc { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+        /* 버스 정보 박스 (회색) */
+        .bus-info-box {
+            background-color: var(--bg-gray); border-radius: 12px; padding: 15px; margin-top: 10px; cursor: pointer;
+        }
+        .bus-tag { color: white; background: var(--primary); font-size: 10px; padding: 3px 8px; border-radius: 6px; margin-right: 5px; font-weight: bold;}
+
+        /* 타이머 스타일 */
+        .timer-big { font-size: 42px; font-weight: 800; color: var(--primary); text-align: center; margin: 10px 0; font-variant-numeric: tabular-nums;}
+        
+    </style>
 </head>
 <body>
-  <H4>HI v.2</H4>
-	<div id="map" style="width:500px;height:400px;"></div>
-	<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df"></script>
-	<script>
-		var container = document.getElementById('map');
-		var options = {
-			center: new kakao.maps.LatLng(33.450701, 126.570667),
-			level: 3
-		};
 
-		var map = new kakao.maps.Map(container, options);
-	</script>
+<div class="app-container">
+    <div class="top-map-area">
+        <div class="status-bar">
+            <span>12:30</span>
+            <span>LTE 80%</span>
+        </div>
+        
+        <div id="map" style="width:100%; height:100%;"></div>
+
+        <div class="map-badge" id="map-status-text">📍 현재 위치 탐색 중</div>
+    </div>
+
+    <div class="bottom-content-area">
+
+        <div id="step-1" class="screen active">
+            <div class="content-header">어디로 갈까요?</div>
+            <div class="input-box">
+                <span>🔵</span> <input type="text" value="냉정역 2호선" readonly>
+            </div>
+            <div class="input-box">
+                <span>🔴</span> <input type="text" placeholder="도착지 검색">
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <div style="font-size:12px; color:#888; margin-bottom:10px;">즐겨찾기</div>
+                <div class="input-box" style="background:white; border:1px solid #eee;">
+                    <span>⭐</span> <div><strong>집 → 학교</strong><br><span style="font-size:11px; color:#aaa;">33번 버스 이용</span></div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="goToStep(2)">경로 찾기</button>
+        </div>
+
+        <div id="step-2" class="screen">
+            <div class="content-header">
+                <span>추천 경로</span>
+                <span style="font-size:14px; color:var(--primary);">24분 소요</span>
+            </div>
+
+            <div class="timeline-container">
+                <div class="timeline-left">
+                    <span class="timeline-time">12:36</span>
+                    <div class="timeline-dot active"></div>
+                    <div class="timeline-line active"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">냉정역</div>
+                </div>
+
+                <div class="timeline-left">
+                    <div class="timeline-line active"></div>
+                    <span class="timeline-icon">🚶</span>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">도보 1분</div>
+                </div>
+
+                <div class="timeline-left">
+                    <span class="timeline-time">12:42</span>
+                    <div class="timeline-dot active"></div>
+                    <div class="timeline-line active"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">냉정역 정류장</div>
+                    <div class="bus-info-box" onclick="goToStep(3)">
+                        <div style="margin-bottom:5px;">
+                            <span class="bus-tag">곧 도착</span>
+                            <span style="color:var(--primary); font-weight:bold;">33번</span>
+                        </div>
+                        <div class="location-desc">
+                            ⌄ 5분 (정류장 4개) 이동<br>
+                            개금역 경유
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-left">
+                    <span class="timeline-time">12:47</span>
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-line" style="height:50%;"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">동의대역</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="goToStep(3)">이 경로로 안내 시작</button>
+        </div>
+
+        <div id="step-3" class="screen">
+            <div class="content-header">버스 기다리는 중</div>
+            <div class="bus-info-box" style="text-align:center; background:white; border:2px solid var(--primary);">
+                <div style="font-size:14px;">33번 버스</div>
+                <div style="font-size:32px; font-weight:bold; color:var(--danger); margin:10px 0;">3분 20초</div>
+                <div style="color:#888;">잠시 후 도착합니다</div>
+            </div>
+            <button class="btn btn-primary" onclick="goToStep(4)">버스 탑승 완료</button>
+        </div>
+
+        <div id="step-4" class="screen">
+            <div class="content-header">이동 중...</div>
+            
+            <div class="timeline-container">
+                <div class="timeline-left">
+                    <div class="timeline-dot active"></div>
+                    <div class="timeline-line active"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">냉정역 (탑승)</div>
+                </div>
+
+                <div class="timeline-left">
+                    <span class="timeline-icon">🚌</span>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title" style="color:var(--primary);">현재: 개금역 인근</div>
+                    <div class="location-desc">2정거장 남음 (곧 하차)</div>
+                </div>
+            </div>
+
+            <button class="btn btn-warning" onclick="goToStep(5)">🔔 하차 벨 누르기</button>
+        </div>
+
+        <div id="step-5" class="screen">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:14px; color:#888;">환승 유효 시간</div>
+                <div class="timer-big" id="transfer-timer">30:00</div>
+                <div style="color:var(--success); font-weight:bold;">지금은 여유 있어요!</div>
+            </div>
+            
+            <div class="bus-info-box">
+                <strong>다음 버스 (110-1번)</strong>
+                <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                    <span>도착 예정</span>
+                    <span style="color:var(--danger); font-weight:bold;">15분 후</span>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:auto;">
+                <button class="btn btn-outline" style="margin:0;" onclick="goToStep(6)">☕ 주변 편의점</button>
+                <button class="btn btn-primary" style="margin:0;" onclick="goToStep(7)">🚶 정류장 이동</button>
+            </div>
+        </div>
+
+        <div id="step-6" class="screen">
+            <div class="content-header">잠깐 들를까요?</div>
+            
+            <div class="bus-info-box" style="background:white; border:1px solid #eee;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:24px;">🏪</div>
+                    <div>
+                        <strong>CU 편의점</strong>
+                        <div style="font-size:12px; color:#888;">왕복 5분 소요 (충분함)</div>
+                    </div>
+                </div>
+            </div>
+             <div class="bus-info-box" style="background:white; border:1px solid #eee;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:24px;">☕</div>
+                    <div>
+                        <strong>메가커피</strong>
+                        <div style="font-size:12px; color:#888;">왕복 8분 소요</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="goToStep(5)">타이머 화면 복귀</button>
+        </div>
+
+        <div id="step-7" class="screen">
+            <div class="bus-info-box" style="background-color:#FFF4E5; border:1px solid #FFD93D;">
+                <h3 style="margin:0; color:#B45309;">⚠️ 서두르세요!</h3>
+                <p style="margin:10px 0 0; color:#B45309; font-size:14px;">버스가 <strong>5분 후</strong> 도착합니다.<br>지금 정류장으로 가야 안전합니다.</p>
+            </div>
+            <div class="timeline-container" style="margin-top:20px;">
+                 <div class="timeline-left">
+                    <span class="timeline-icon">🚶</span>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">정류장까지 도보 3분</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="goToStep(8)">환승 버스 탑승</button>
+        </div>
+
+        <div id="step-8" class="screen">
+            <div class="content-header">목적지로 이동 중</div>
+            <div class="timeline-container">
+                 <div class="timeline-left">
+                    <div class="timeline-dot active"></div>
+                    <div class="timeline-line active"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">가야고교 (환승)</div>
+                </div>
+                 <div class="timeline-left">
+                     <span class="timeline-icon">🚌</span>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">110-1번 탑승 중</div>
+                    <div class="location-desc">목적지까지 3정거장</div>
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="goToStep(9)">목적지 도착</button>
+        </div>
+
+        <div id="step-9" class="screen">
+            <div style="text-align:center; margin-top:30px;">
+                <div style="font-size:60px;">🎉</div>
+                <h2>도착 완료!</h2>
+                <p style="color:#888;">환승에 성공하여 요금을 아꼈습니다.</p>
+            </div>
+
+            <div class="bus-info-box" style="background:white; border:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>총 소요 시간</span> <strong>38분</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:var(--primary);">
+                    <span>절약한 요금</span> <strong>1,450원</strong>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="goToStep(1)">처음으로</button>
+        </div>
+
+    </div>
+</div>
+
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df"></script>
+
+<script>
+    // [1] 지도 초기화 및 설정
+    var mapContainer = document.getElementById('map');
+    
+    // 부산 냉정역 인근 좌표 (시작점)
+    var startPos = new kakao.maps.LatLng(35.1512, 129.0123); 
+    // 개금역 (환승점)
+    var transferPos = new kakao.maps.LatLng(35.1532, 129.0205);
+    // 동의대역 (도착점)
+    var endPos = new kakao.maps.LatLng(35.1555, 129.0350);
+
+    var mapOption = { 
+        center: startPos, 
+        level: 4 // 확대 레벨
+    };
+
+    var map = new kakao.maps.Map(mapContainer, mapOption);
+
+    // [2] 마커 추가 함수
+    function addMarker(position) {
+        var marker = new kakao.maps.Marker({ position: position });
+        marker.setMap(map);
+        return marker;
+    }
+    
+    addMarker(startPos);   // 출발지 마커
+    addMarker(transferPos); // 환승지 마커
+    addMarker(endPos);     // 도착지 마커
+
+    // [3] 앱 로직 (화면 전환 & 지도 제어)
+    let timerInterval;
+
+    function goToStep(stepNumber) {
+        // 1. 화면 전환 (Bottom Sheet)
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        const targetScreen = document.getElementById(`step-${stepNumber}`);
+        if(targetScreen) targetScreen.classList.add('active');
+
+        // 2. 지도 및 배지 텍스트 업데이트
+        const badge = document.getElementById('map-status-text');
+        
+        switch(stepNumber) {
+            case 1: // 홈
+                badge.innerHTML = "📍 현재 위치 탐색 중";
+                map.panTo(startPos); 
+                map.setLevel(4);
+                break;
+            case 2: // 경로 조회 (전체 경로 보기)
+                badge.innerHTML = "🗺️ 경로 전체 보기";
+                map.setCenter(transferPos); // 중간 지점
+                map.setLevel(7); // 줌 아웃
+                break;
+            case 3: // 버스 대기
+                badge.innerHTML = "📡 버스 위치 확인";
+                map.panTo(startPos);
+                map.setLevel(3);
+                break;
+            case 4: // 버스 이동
+                badge.innerHTML = "🚌 버스 이동 중...";
+                // 시작점과 환승점 사이 가상 위치
+                map.panTo(new kakao.maps.LatLng(35.1522, 129.0160));
+                break;
+            case 5: // 환승 대기 (타이머)
+                badge.innerHTML = "⏳ 환승 대기 (주변 탐색)";
+                map.panTo(transferPos);
+                map.setLevel(2); // 환승지 상세 확대
+                break;
+            case 6: // 편의시설
+                badge.innerHTML = "☕ 편의시설 위치";
+                // 환승지 근처 편의점 위치로 살짝 이동
+                map.panTo(new kakao.maps.LatLng(35.1535, 129.0210));
+                break;
+            case 7: // 환승 임박
+                badge.innerHTML = "🏃 정류장 이동 경로";
+                map.panTo(transferPos);
+                break;
+            case 8: // 2차 탑승
+                badge.innerHTML = "🚌 목적지로 이동 중";
+                map.panTo(endPos);
+                map.setLevel(5);
+                break;
+            case 9: // 도착
+                badge.innerHTML = "🏁 도착 완료";
+                map.panTo(endPos);
+                map.setLevel(3);
+                break;
+        }
+
+        // 3. 타이머 로직 제어
+        if(stepNumber === 5) {
+            if(!timerInterval) startTimer(30 * 60); // 30분
+        } else if (stepNumber === 1 || stepNumber === 9) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+
+    // 타이머 함수
+    function startTimer(duration) {
+        let timer = duration, minutes, seconds;
+        const display = document.querySelector('#transfer-timer');
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(function () {
+            minutes = parseInt(timer / 60, 10);
+            seconds = parseInt(timer % 60, 10);
+
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+
+            display.textContent = minutes + ":" + seconds;
+
+            if (--timer < 0) {
+                clearInterval(timerInterval);
+                display.textContent = "00:00";
+                alert("환승 시간이 종료되었습니다.");
+            }
+        }, 1000);
+    }
+</script>
+
 </body>
 </html>
