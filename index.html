@@ -9,7 +9,7 @@
 
     <style>
         /* -------------------------------------------
-           [기존 스타일 + 카테고리 검색 스타일 통합]
+           [스타일 정의: 기존 + 카테고리 검색 통합]
            ------------------------------------------- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
         
@@ -50,15 +50,8 @@
             box-sizing: border-box;
             z-index: 20;
         }
-        .bottom-sheet.expanded {
-            transform: translateY(0);
-            height: 80%; 
-            overflow-y: auto;
-        }
-        .drag-handle {
-            width: 40px; height: 5px; background: #ccc; border-radius: 5px;
-            margin: 0 auto 15px; cursor: grab;
-        }
+        .bottom-sheet.expanded { transform: translateY(0); height: 80%; overflow-y: auto; }
+        .drag-handle { width: 40px; height: 5px; background: #ccc; border-radius: 5px; margin: 0 auto 15px; cursor: grab; }
         
         /* 입력 필드 및 버튼 스타일 */
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
@@ -68,15 +61,9 @@
         
         /* 실시간 검색 결과 추천 목록 스타일 */
         .search-results {
-            position: absolute;
-            z-index: 30; 
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            max-height: 300px;
-            overflow-y: auto;
-            display: none; 
-            box-sizing: border-box;
+            position: absolute; z-index: 30; background: white; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto;
+            display: none; box-sizing: border-box;
         }
         .search-results ul { list-style: none; padding: 0; margin: 0; }
         .search-results li { padding: 12px 15px; font-size: 15px; color: #333; border-bottom: 1px solid #f2f4f6; cursor: pointer; box-sizing: border-box; }
@@ -84,7 +71,7 @@
         .search-results li:last-child { border-bottom: none; }
         .search-address { font-size: 12px; color: #8b95a1; display: block; margin-top: 2px; }
 
-        /* 카테고리 검색 필터 스타일 */
+        /* 카테고리 검색 필터 스타일 (통합된 부분) */
         #category {position:absolute;top:10px;left:10px;border-radius: 5px; border:1px solid #909090;box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);background: #fff;overflow: hidden;z-index: 2;}
         #category li {float:left;list-style: none;width:50px;px;border-right:1px solid #acacac;padding:6px 0;text-align: center; cursor: pointer;}
         #category li.on {background: #eee;}
@@ -163,7 +150,7 @@
             
         // *** 1. 상수 및 전역 변수 설정 ***
         
-        // Vercel 배포 도메인 주소 (이미 최종 수정됨)
+        // Vercel 배포 도메인 주소 (최종 수정된 주소 사용)
         const myServerUrl = "https://assist-jxup4d30i-notiks-projects.vercel.app/api/proxy";
         
         const mapContainer = document.getElementById('map');
@@ -214,9 +201,9 @@
             }
         }
         
-        // *** 3. 카테고리 검색 로직 (새로 통합된 기능) ***
+        // *** 3. 카테고리 검색 로직 ***
 
-        // 엘리먼트에 이벤트 핸들러를 등록하는 함수
+        // 엘리먼트에 이벤트 핸들러를 등록하는 함수 (기존 카테고리 코드에서 가져옴)
         function addEventHandle(target, type, callback) {    
             if (target.addEventListener) { target.addEventListener(type, callback); } 
             else { target.attachEvent('on' + type, callback); }
@@ -318,9 +305,9 @@
                 className = this.className;
             placeOverlay.setMap(null);
             
-            // 기존 Transit 마커 제거
-            markers.forEach(m => m.setMap(null)); markers = []; 
-            if (window.polyline) window.polyline.setMap(null); // Transit 경로 제거
+            // 기존 Transit 마커 제거 및 경로 제거 (TMAP Transit 기능과의 상호작용)
+            markers.forEach(m => m.setMap(null)); markers.length = 0; 
+            if (window.polyline) window.polyline.setMap(null); 
 
             if (className === 'on') {
                 currCategory = '';
@@ -416,10 +403,10 @@
                 const data = await response.json();
                 if (data.error) { throw new Error(data.error); }
                 
-                // 기존 카테고리 마커 제거 및 장소 정보 숨김
+                // 카테고리 마커 제거 및 장소 정보 숨김 (카테고리 기능과의 상호작용)
                 removeCategoryMarker();
                 placeOverlay.setMap(null); 
-                changeCategoryClass(); // 카테고리 스타일 해제
+                changeCategoryClass(); 
 
                 renderRoutes(data.routes);
                 
@@ -464,11 +451,63 @@
         }
         
         function renderRoutes(routes) {
-            // ... (경로 렌더링 로직은 그대로 유지) ...
+            resultsContainer.innerHTML = '<h4>검색된 경로:</h4>';
+            
+            routes.forEach((route, index) => {
+                const totalTimeMinutes = Math.ceil(route.totalTime / 60);
+                const totalFare = route.totalFare;
+                
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'route-summary';
+                summaryDiv.innerHTML = `
+                    <div class="time-info">${totalTimeMinutes}분 소요</div>
+                    <div class="transit-info">요금: ${totalFare.toLocaleString()}원</div>
+                `;
+                summaryDiv.onclick = () => drawRoute(route);
+                resultsContainer.appendChild(summaryDiv);
+                
+                if (index === 0) { drawRoute(route); }
+            });
         }
         
         function drawRoute(route) {
-            // ... (경로 그리기 로직은 그대로 유지) ...
+            markers.forEach(m => m.setMap(null)); markers.length = 0;
+            if (window.polyline) window.polyline.setMap(null);
+            
+            const points = [];
+            
+            // ... 경로 데이터 파싱 로직 ...
+            route.legs.forEach(leg => {
+                leg.steps.forEach(step => {
+                    if (step.route) {
+                        step.route.linestring.split(' ').forEach(coordStr => {
+                            const [lon, lat] = coordStr.split(',');
+                            points.push(new kakao.maps.LatLng(lat, lon));
+                        });
+                    }
+                });
+            });
+            
+            if (points.length === 0) return;
+            
+            // 폴리라인 그리기
+            window.polyline = new kakao.maps.Polyline({
+                path: points, strokeWeight: 5, strokeColor: '#007bff', strokeOpacity: 0.8, strokeStyle: 'solid'
+            });
+            window.polyline.setMap(map);
+            
+            // 마커 설정 및 지도에 표시
+            const startPos = points[0];
+            const endPos = points[points.length - 1];
+            const startMarker = new kakao.maps.Marker({ position: startPos, title: '출발' });
+            const endMarker = new kakao.maps.Marker({ position: endPos, title: '도착' });
+            startMarker.setMap(map); endMarker.setMap(map);
+            markers.push(startMarker, endMarker);
+            
+            // 지도 영역 설정
+            const bounds = new kakao.maps.LatLngBounds();
+            points.forEach(p => bounds.extend(p));
+            map.setBounds(bounds);
         }
 
 
