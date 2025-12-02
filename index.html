@@ -3,8 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Transit Pro (Fix)</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Hybrid Transit Pro (Mobile)</title>
+    <style>
+        /* -------------------------------------------
+           [스타일 정의] 모바일 최적화 UI
+           ------------------------------------------- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #f5f6f8; }
+
+        /* 지도 영역 */
+        #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 0; }
+
+        /* 플로팅 메뉴 (우측 상단) */
+        .floating-menu {
+            position: absolute; top: 16px; right: 16px; z-index: 10;
+            display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+        }
+        .menu-item {
+            width: 44px; height: 44px; border-radius: 50%; background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); border: none; font-size: 20px;
+            display: none; align-items: center; justify-content: center; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .menu-item:active { transform: scale(0.95); }
+        .floating-menu.open .menu-item { display: flex; }
+        .toggle-btn {
+            width: 44px; height: 44px; border-radius: 50%; background: #3182F6; color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: none; display: flex;
+            align-items: center; justify-content: center; cursor: pointer; z-index: 11;
+        }
+        .toggle-btn svg { width: 24px; height: 24px; fill: currentColor; transition: transform 0.3s; }
+        .floating-menu.open .toggle-btn svg { transform: rotate(45deg); }
+
+        /* 바텀 시트 (검색창 및 결과) */
+        .bottom-sheet {
+            position: absolute; left: 0; right: 0; bottom: 0; background: white;
+            border-top-left-radius: 20px; border-top-right-radius: 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 20;
+            transition: height 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .bottom-sheet.collapsed { height: 140px; }
+        .bottom-sheet.expanded { height: 80%; }
+
+        /* 핸들바 (드래그 유도) */
+        .sheet-header {
+            width: 100%; height: 24px; display: flex; justify-content: center; align-items: center;
+            flex-shrink: 0; cursor: pointer; background: white;
+        }
+        .handle-bar { width: 40px; height: 5px; background: #E5E8EB; border-radius: 3px; }
+
+        /* 시트 내부 콘텐츠 */
+        .sheet-content { flex: 1; padding: 0 20px 20px; overflow-y: auto; display: flex; flex-direction: column; }
+
+        /* 검색바 (축소 상태일 때 보임) */
+        .search-bar {
+            width: 100%; height: 50px; background: #F2F4F6; border-radius: 12px;
+            display: flex; align-items: center; padding: 0 16px; gap: 10px; cursor: pointer; margin-bottom: 20px; flex-shrink: 0;
+        }
+
+        /* 검색 폼 (확장 상태일 때 보임) */
+        .search-form { display: block; }
+        .input-row { position: relative; margin-bottom: 12px; }
+        .input-text {
+            width: 100%; height: 48px; border: 1px solid #E5E8EB; border-radius: 12px;
+            padding: 0 16px 0 40px; font-size: 16px; outline: none; background: #fff;
+        }
+        .input-text:focus { border-color: #3182F6; }
+        .dot { position: absolute; left: 14px; top: 18px; width: 8px; height: 8px; border-radius: 50%; }
+        .dot.start { background: #191F28; }
+        .dot.end { background: #FF3B30; }
+
+        .btn-search {
+            width: 100%; height: 52px; background: #3182F6; color: white; border: none;
+            border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 10px;
+        }
+        .pill {
+            padding: 6px 14px; background: #F2F4F6; border-radius: 20px; font-size: 13px;
+            color: #4E5968; border: none; cursor: pointer; font-weight: 600;
+        }
+
+        /* 결과 카드 */
+        .result-card { display: none; margin-top: 0; flex-direction: column; height: 100%; }
+        .result-card.active { display: flex; }
+        .time-info { font-size: 26px; font-weight: 800; color: #191F28; margin-bottom: 4px; }
+        .sub-info { font-size: 15px; color: #8B95A1; margin-bottom: 20px; }
+
+        /* 타임라인 스타일 */
+        .timeline {
+            flex: 1; overflow-y: auto; padding-left: 10px; position: relative;
+            border-left: 2px solid #E5E8EB; margin-left: 10px;
+        }
+        .t-item { position: relative; padding-left: 20px; margin-bottom: 24px; }
+        .t-dot {
+            position: absolute; left: -7px; top: 4px; width: 12px; height: 12px;
+            border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px #fff;
+        }
+        .t-dot.walk { background: #8B95A1; }
+        .t-dot.bus { background: #3182F6; }
+        .t-text { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px; }
+        .t-sub { font-size: 13px; color: #8B95A1; }
+
+    </style>
 </head>
 <body>
 
@@ -41,7 +141,7 @@
                 </div>
                 <div style="display:flex; gap:8px; margin:12px 0;">
                     <button class="pill" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
-                    <button class="pill" onclick="fillSearch('서울역', '홍대입구')">🚇 지하철</button>
+                    <button class="pill" onclick="fillSearch('서울역', '홍대입구')">🚇 예시 검색</button>
                 </div>
                 <button class="btn-search" onclick="runHybridSearch()">대중교통 경로 검색</button>
             </div>
@@ -63,7 +163,7 @@
 
 <script>
     /* -------------------------------------------
-       [1] 초기화 (안전장치 추가)
+       [1] 초기화
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
     const mapOption = { 
@@ -80,7 +180,6 @@
     let markers = [];
     let isTrafficOn = false;
 
-    // 로딩 완료 후 지도 사이즈 재조정 (깨짐 방지)
     window.onload = () => {
         map.relayout();
         moveToCurrentLocation();
@@ -111,15 +210,19 @@
     const sheet = document.getElementById('bottomSheet');
     const resultCard = document.getElementById('resultCard');
     const searchForm = document.querySelector('.search-form');
+    const searchBar = document.querySelector('.search-bar'); // 검색바 요소 선택
 
     function toggleSheet() {
         if(sheet.classList.contains('collapsed')) expandSheet(); else collapseSheet();
     }
     function expandSheet() {
         sheet.classList.remove('collapsed'); sheet.classList.add('expanded');
+        searchBar.style.display = 'none'; // 확장시 검색바 숨김
+        if(!resultCard.classList.contains('active')) searchForm.style.display = 'block';
     }
     function collapseSheet() {
         sheet.classList.remove('expanded'); sheet.classList.add('collapsed');
+        searchBar.style.display = 'flex'; // 축소시 검색바 보임
         document.getElementById('startInput').blur();
     }
     function fillSearch(s, e) {
@@ -132,7 +235,7 @@
         resultCard.classList.remove('active');
         searchForm.style.display = 'block';
         collapseSheet();
-        map.setLevel(6); // 줌 레벨 초기화
+        map.setLevel(6); 
     }
 
     function clearMapData() {
@@ -141,7 +244,7 @@
     }
 
     /* -------------------------------------------
-       [3] 하이브리드 검색 (안전장치 강화)
+       [3] 하이브리드 검색 (ThingProxy 사용)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
@@ -153,10 +256,11 @@
         
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
-        await fetchTmapDataAndRender(sCoord, eCoord);
-
+        // UI 전환
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
+        
+        await fetchTmapDataAndRender(sCoord, eCoord);
     }
 
     function getKakaoCoords(keyword) {
@@ -175,9 +279,11 @@
     }
 
     async function fetchTmapDataAndRender(start, end) {
-        const proxy = 'https://corsproxy.io/?'; 
-        const url = "https://apis.openapi.sk.com/transit/routes";
-        
+        // 모바일 대응: ThingProxy 사용
+        const proxy = "https://thingproxy.freeboard.io/fetch/";
+        const tmapUrl = "https://apis.openapi.sk.com/transit/routes";
+        const finalUrl = proxy + tmapUrl;
+
         const payload = {
             startX: start.lng, startY: start.lat,
             endX: end.lng, endY: end.lat,
@@ -185,29 +291,39 @@
         };
 
         try {
-            const response = await fetch(proxy + encodeURIComponent(url), {
+            document.getElementById('routeSummary').innerText = "경로 데이터 수신 중...";
+
+            const response = await fetch(finalUrl, {
                 method: "POST",
-                headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
+                headers: { 
+                    "appKey": TMAP_APP_KEY, 
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error("TMAP API Error");
+            if (!response.ok) {
+                // ThingProxy 등 공용 프록시는 때때로 실패할 수 있음
+                throw new Error(`API 오류: ${response.status} (중계 서버 불안정 가능성)`);
+            }
+
             const data = await response.json();
             
             if (!data.metaData || !data.metaData.plan) {
                 alert("대중교통 경로를 찾을 수 없습니다.");
+                document.getElementById('routeSummary').innerText = "경로 없음";
                 return;
             }
 
             const itinerary = data.metaData.plan.itineraries[0];
             const totalTime = Math.round(itinerary.totalTime / 60);
             const totalFare = itinerary.fare.regular.totalFare;
+            
             document.getElementById('totalTime').innerText = `${totalTime}분`;
             document.getElementById('routeSummary').innerText = `요금 ${totalFare}원 • 환승 ${itinerary.transferCount}회`;
 
-            clearMapData(); // 맵 초기화
+            clearMapData();
 
-            // 출발/도착 마커
             addMarker(start.lat, start.lng, 'start');
             addMarker(end.lat, end.lng, 'end');
 
@@ -216,9 +332,8 @@
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
 
             const legs = itinerary.legs;
-            // [중요] Bounds 초기화
             const bounds = new kakao.maps.LatLngBounds(); 
-            let hasValidPath = false; // 경로가 하나라도 그려졌는지 확인
+            let hasValidPath = false;
 
             legs.forEach(leg => {
                 if (leg.passShape) {
@@ -235,10 +350,7 @@
                         });
                         polyline.setMap(map);
                         polylines.push(polyline);
-                        
-                        // Bounds에는 시작점과 끝점만 추가 (최적화)
-                        bounds.extend(path[0]);
-                        bounds.extend(path[path.length-1]);
+                        path.forEach(point => bounds.extend(point));
                     }
                 }
 
@@ -253,33 +365,30 @@
 
             addTimelineItem(timelineBox, 'walk', '도착', end.name);
             
-            // [핵심] 지도 깨짐 방지 로직
-            map.relayout(); // 지도 크기 재계산
+            map.relayout();
             if (hasValidPath && !bounds.isEmpty()) {
-                setTimeout(() => map.setBounds(bounds), 100); // 약간의 딜레이 후 범위 재설정
+                setTimeout(() => map.setBounds(bounds, 50), 100); 
             } else {
-                map.setCenter(new kakao.maps.LatLng(start.lat, start.lng)); // 경로 없으면 출발지로 이동
+                map.setCenter(new kakao.maps.LatLng(start.lat, start.lng));
             }
 
         } catch (e) {
             console.error(e);
-            alert("경로를 불러올 수 없습니다. (CORS 또는 API 키 확인)");
+            alert(`서버 연결 실패. 잠시 후 다시 시도해주세요.\n(원인: ${e.message})`);
+            document.getElementById('routeSummary').innerText = "연결 실패";
         }
     }
 
-    // TMAP 좌표 파싱 (에러 방지)
     function parseTmapShapeToKakao(passShape) {
         if (!passShape || typeof passShape !== 'string') return [];
         const coords = passShape.split(' ');
         return coords.map(c => {
             const [lng, lat] = c.split(',');
-            // parseFloat로 확실하게 숫자로 변환
             return new kakao.maps.LatLng(parseFloat(lat), parseFloat(lng));
         });
     }
 
     function addMarker(lat, lng, type) {
-        // 심플한 HTML 마커
         const content = `<div style="width:14px; height:14px; background:${type==='start'?'#191F28':'#FF3B30'}; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
         const marker = new kakao.maps.CustomOverlay({
             position: new kakao.maps.LatLng(lat, lng),
