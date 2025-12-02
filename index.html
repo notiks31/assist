@@ -3,72 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Transfer Map</title>
+    <title>Clean Map App</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="app-frame">
+    
     <div id="map"></div>
 
     <div class="top-controls">
-        <button class="btn-floating" id="btn-bus" onclick="toggleRealTimeBus()">
-            <svg viewBox="0 0 24 24"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/></svg>
+        <button class="pill-btn" onclick="toggleAmenities()">
+            <span>🏪</span> 편의점
         </button>
+        
+        <div class="top-right">
+            <button class="pill-btn" onclick="toggleTraffic()" title="교통상황">
+                🚦 교통
+            </button>
+        </div>
     </div>
 
-    <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
+    <button class="my-loc-btn" onclick="moveToCurrentLocation()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2v20M2 12h20"/>
+        </svg>
+    </button>
 
-        <div id="view-search">
-            <h2 style="margin: 0 0 16px 0; font-size: 20px;">어디로 갈까요?</h2>
-            
-            <div class="chip-container">
-                <div class="chip" onclick="fillRoute('사상역', '서면역')">🏠 집 ➜ 학교</div>
-                <div class="chip" onclick="fillRoute('부산역', '광안리')">🌊 역 ➜ 바다</div>
-            </div>
-
-            <div class="input-group">
-                <div class="input-row">
-                    <div class="dot blue"></div>
-                    <input type="text" id="inp-start" class="input-field" placeholder="출발지 입력">
-                </div>
-                <div class="input-row">
-                    <div class="dot red"></div>
-                    <input type="text" id="inp-end" class="input-field" placeholder="도착지 입력">
-                </div>
-            </div>
-
-            <button class="btn-primary" onclick="searchRoute()">경로 확인하기</button>
+    <div class="bottom-sheet collapsed" id="bottomSheet">
+        <div class="sheet-header" onclick="toggleSheet()">
+            <div class="handle-bar"></div>
         </div>
 
-        <div id="view-result" class="result-view">
-            <div class="route-summary">
-                <div>
-                    <span class="time-big">24분</span>
-                    <span class="dist-small">오후 1:30 도착</span>
+        <div class="sheet-content">
+            <div id="view-default">
+                <div class="sheet-title" onclick="expandSheet()">어디로 갈까요?</div>
+                
+                <div class="input-container" onclick="expandSheet()" style="cursor: pointer;">
+                    <div class="input-row" style="border:none;">
+                        <span style="margin-right:10px; font-size:18px;">🔍</span>
+                        <span style="color:#ADB5BD; font-weight:500;">장소, 버스, 지하철 검색</span>
+                    </div>
                 </div>
-                <div style="font-weight:700; color:var(--primary); cursor:pointer;" onclick="resetApp()">다시 검색</div>
+
+                <div class="chip-group">
+                    <div class="chip blue" onclick="fillAndSearch('현위치', '집')">🏠 집으로</div>
+                    <div class="chip" onclick="fillAndSearch('현위치', '회사')">🏢 회사로</div>
+                    <div class="chip" onclick="fillAndSearch('부산역', '광안리')">🌊 광안리</div>
+                </div>
             </div>
 
-            <div class="timeline">
-                <div class="t-item">
-                    <div class="t-point start"></div>
-                    <div class="t-title" id="txt-start">출발지</div>
-                    <div class="t-desc">도보 3분 이동</div>
+            <div id="view-expanded" class="hidden">
+                <div class="sheet-title">경로 검색</div>
+                
+                <div class="input-container">
+                    <div class="input-row">
+                        <div class="dot start"></div>
+                        <input type="text" id="startInput" class="input-field" placeholder="출발지 입력">
+                    </div>
+                    <div class="input-row">
+                        <div class="dot end"></div>
+                        <input type="text" id="endInput" class="input-field" placeholder="도착지 입력">
+                    </div>
                 </div>
-                <div class="t-item">
-                    <div class="t-point bus">🚌</div>
-                    <div class="t-title" style="color:var(--primary);">33번 버스</div>
-                    <div class="t-desc">9개 정류장 이동 (약 18분)</div>
+
+                <div class="chip-group">
+                    <div class="chip" onclick="setInput('startInput', '내 위치')">📍 내 위치</div>
+                    <div class="chip" onclick="setInput('endInput', '서면 롯데백화점')">🛍️ 서면 롯데</div>
+                    <div class="chip" onclick="setInput('endInput', '부산대학교')">🎓 부산대</div>
                 </div>
-                <div class="t-item">
-                    <div class="t-point end"></div>
-                    <div class="t-title" id="txt-end">도착지</div>
-                </div>
+
+                <button class="btn-primary" onclick="findPath()">경로 확인하기</button>
             </div>
-            
-            <button class="btn-primary" style="background:#333;" onclick="resetApp()">안내 종료</button>
+
+            <div id="resultCard" class="result-card">
+                <div class="route-header">
+                    <div>
+                        <span class="time-display" id="timeDisplay">24분</span>
+                        <span class="time-sub" id="distanceDisplay">3.5km</span>
+                    </div>
+                    <button class="chip" onclick="resetSearch()">다시 검색</button>
+                </div>
+
+                <div class="timeline">
+                    <div class="t-item">
+                        <div class="t-dot start"></div>
+                        <div class="t-title" id="resStart">출발지</div>
+                        <div class="t-desc">도보 이동</div>
+                    </div>
+                    <div class="t-item">
+                        <div class="t-dot" style="background:#E5E8EB; border:none; width:6px; height:6px; left:-17px;"></div>
+                        <div class="t-title" style="color:var(--primary);">33번 버스</div>
+                        <div class="t-desc">약 18분 탑승</div>
+                    </div>
+                    <div class="t-item">
+                        <div class="t-dot end"></div>
+                        <div class="t-title" id="resEnd">도착지</div>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" style="margin-top:10px;" onclick="resetSearch()">안내 종료</button>
+            </div>
         </div>
     </div>
 </div>
@@ -76,163 +112,224 @@
 <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
 
 <script>
-    /* 1. 지도 초기화 */
-    var mapContainer = document.getElementById('map');
-    var mapOption = { center: new kakao.maps.LatLng(35.1512, 129.0123), level: 7 };
-    var map = new kakao.maps.Map(mapContainer, mapOption);
-    var ps = new kakao.maps.services.Places(); // 장소 검색
+    /* ---------------------------------------------
+       [1] 지도 엔진 초기화
+       --------------------------------------------- */
+    const mapContainer = document.getElementById('map');
+    const mapOption = { center: new kakao.maps.LatLng(35.1512, 129.0123), level: 5 }; // 부산 냉정역 부근
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+    const ps = new kakao.maps.services.Places();
+    
+    let markers = [];
+    let polylines = [];
+    let currentOverlayType = null;
 
-    // 마커/라인 관리
-    var markers = [];
-    var polyline = null;
-    var busMarkers = [];
+    // 시작 시 내 위치로 이동
+    window.onload = () => moveToCurrentLocation();
 
-    /* 2. 경로 검색 기능 */
-    function fillRoute(s, e) {
-        document.getElementById('inp-start').value = s;
-        document.getElementById('inp-end').value = e;
+    /* ---------------------------------------------
+       [2] Bottom Sheet UX 로직
+       --------------------------------------------- */
+    const sheet = document.getElementById('bottomSheet');
+    const viewDefault = document.getElementById('view-default');
+    const viewExpanded = document.getElementById('view-expanded');
+    const resultCard = document.getElementById('resultCard');
+
+    function toggleSheet() {
+        if (sheet.classList.contains('collapsed')) expandSheet();
+        else collapseSheet();
     }
 
-    async function searchRoute() {
-        var startVal = document.getElementById('inp-start').value;
-        var endVal = document.getElementById('inp-end').value;
-
-        if(!startVal || !endVal) { alert("출발지와 도착지를 모두 입력해주세요."); return; }
-
-        // 기존 마커 제거
-        removeMapObjects();
-
-        // 좌표 검색 (Promise)
-        var startCoords = await getCoords(startVal);
-        var endCoords = await getCoords(endVal);
-
-        if(!startCoords || !endCoords) { alert("장소를 찾을 수 없습니다."); return; }
-
-        // 화면 전환 (검색창 숨기고 결과창 보이기)
-        document.getElementById('view-search').classList.add('hidden');
-        document.getElementById('view-result').classList.add('show');
-        document.getElementById('txt-start').innerText = startVal;
-        document.getElementById('txt-end').innerText = endVal;
-
-        // 마커 찍기
-        addMarker(startCoords, 'start');
-        addMarker(endCoords, 'end');
-
-        // 경로 그리기 (시뮬레이션)
-        drawPath(startCoords, endCoords);
+    function expandSheet() {
+        sheet.classList.remove('collapsed');
+        sheet.classList.add('expanded');
+        
+        // 뷰 전환 (기본 -> 입력폼)
+        if (resultCard.classList.contains('active')) return; // 결과창 있으면 유지
+        viewDefault.classList.add('hidden');
+        viewExpanded.classList.remove('hidden');
     }
 
-    function resetApp() {
-        document.getElementById('view-search').classList.remove('hidden');
-        document.getElementById('view-result').classList.remove('show');
-        document.getElementById('inp-start').value = '';
-        document.getElementById('inp-end').value = '';
-        removeMapObjects();
+    function collapseSheet() {
+        sheet.classList.remove('expanded');
+        sheet.classList.add('collapsed');
+        
+        // 키보드 내리기
+        document.getElementById('startInput').blur();
+        document.getElementById('endInput').blur();
+
+        // 뷰 복구 (결과창 없을 때만)
+        if (!resultCard.classList.contains('active')) {
+            setTimeout(() => {
+                viewDefault.classList.remove('hidden');
+                viewExpanded.classList.add('hidden');
+            }, 300);
+        }
+    }
+
+    function setInput(id, val) {
+        document.getElementById(id).value = val;
+    }
+
+    function fillAndSearch(s, e) {
+        setInput('startInput', s);
+        setInput('endInput', e);
+        expandSheet();
+        findPath();
+    }
+
+    function resetSearch() {
+        // 맵 클리어
+        polylines.forEach(p => p.setMap(null)); polylines = [];
+        markers.forEach(m => m.setMap(null)); markers = [];
+        
+        // UI 초기화
+        resultCard.classList.remove('active');
+        viewExpanded.classList.remove('hidden'); // 다시 입력폼으로
+        setInput('startInput', '');
+        setInput('endInput', '');
+        collapseSheet(); // 내려가기
+    }
+
+    /* ---------------------------------------------
+       [3] 기능: 내 위치 / 편의점 / 교통
+       --------------------------------------------- */
+    function moveToCurrentLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const locPosition = new kakao.maps.LatLng(lat, lng);
+                
+                // 파란 점 마커 (잡다/토스 스타일)
+                const content = `
+                    <div style="
+                        width: 18px; height: 18px; 
+                        background: #3182F6; 
+                        border: 3px solid white; 
+                        border-radius: 50%; 
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                    </div>`;
+                const customOverlay = new kakao.maps.CustomOverlay({ position: locPosition, content: content });
+                customOverlay.setMap(map);
+                map.panTo(locPosition);
+            });
+        }
+    }
+
+    function toggleAmenities() {
+        markers.forEach(m => m.setMap(null)); markers = [];
+        // CS2: 편의점
+        ps.categorySearch('CS2', (data, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                const bounds = new kakao.maps.LatLngBounds();
+                data.forEach(place => {
+                    const marker = new kakao.maps.Marker({
+                        map: map, position: new kakao.maps.LatLng(place.y, place.x)
+                    });
+                    markers.push(marker);
+                    bounds.extend(new kakao.maps.LatLng(place.y, place.x));
+                });
+                map.setBounds(bounds);
+            }
+        }, { useMapBounds: true });
+    }
+
+    function toggleTraffic() {
+        if (currentOverlayType === 'traffic') {
+            map.removeOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
+            currentOverlayType = null;
+        } else {
+            map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
+            currentOverlayType = 'traffic';
+        }
+    }
+
+    /* ---------------------------------------------
+       [4] 기능: 스마트 경로 검색 (도로 그리기)
+       --------------------------------------------- */
+    async function findPath() {
+        const startVal = document.getElementById('startInput').value;
+        const endVal = document.getElementById('endInput').value;
+
+        if (!startVal || !endVal) { alert("출발지와 도착지를 입력해주세요."); return; }
+
+        // 1. 좌표 검색
+        const startCoords = await getCoords(startVal);
+        const endCoords = await getCoords(endVal);
+
+        if (!startCoords || !endCoords) { alert("장소를 찾을 수 없습니다."); return; }
+
+        // 2. 거리 계산 및 그리기
+        const distance = getDistance(startCoords, endCoords);
+        drawPath(startCoords, endCoords, distance);
+
+        // 3. 결과 UI 표시
+        viewExpanded.classList.add('hidden'); // 입력폼 숨김
+        resultCard.classList.add('active');   // 결과카드 표시
+        
+        document.getElementById('resStart').innerText = startVal;
+        document.getElementById('resEnd').innerText = endVal;
+        document.getElementById('distanceDisplay').innerText = distance.toFixed(1) + "km";
+        
+        // 시간 계산 시뮬레이션
+        const min = Math.round(distance * 3 + 10);
+        document.getElementById('timeDisplay').innerText = min + "분";
     }
 
     function getCoords(keyword) {
-        return new Promise((resolve) => {
-            ps.keywordSearch(keyword, (data, status) => {
-                if (status === kakao.maps.services.Status.OK) {
-                    resolve(new kakao.maps.LatLng(data[0].y, data[0].x));
-                } else {
-                    resolve(null);
+        return new Promise(resolve => {
+            if(keyword.includes("현위치") || keyword.includes("내 위치")) {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => resolve(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude)));
                 }
+                return;
+            }
+            ps.keywordSearch(keyword, (data, status) => {
+                if (status === kakao.maps.services.Status.OK) resolve(new kakao.maps.LatLng(data[0].y, data[0].x));
+                else resolve(null);
             });
         });
     }
 
-    function addMarker(pos, type) {
-        var color = type === 'start' ? '#2C7FFF' : '#FF3B30';
-        var content = `<div style="width:14px; height:14px; background:${color}; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
-        var overlay = new kakao.maps.CustomOverlay({ position: pos, content: content });
-        overlay.setMap(map);
-        markers.push(overlay);
-    }
+    function drawPath(start, end, distKm) {
+        // 기존 선 제거
+        polylines.forEach(p => p.setMap(null)); polylines = [];
 
-    function removeMapObjects() {
-        markers.forEach(m => m.setMap(null)); markers = [];
-        if(polyline) polyline.setMap(null);
-    }
+        // 마커
+        new kakao.maps.Marker({ map: map, position: start });
+        new kakao.maps.Marker({ map: map, position: end });
 
-    function drawPath(start, end) {
-        // 실제 경로 대신 시뮬레이션 경로 (사상-서면 예시)
-        var pathData = [
-            start,
-            new kakao.maps.LatLng(35.162287, 128.985698),
-            new kakao.maps.LatLng(35.150645, 129.004123),
-            new kakao.maps.LatLng(35.153211, 129.020567),
-            new kakao.maps.LatLng(35.157812, 129.060012),
-            end
-        ];
+        // 'ㄱ'자 꺾임 경로 시뮬레이션
+        const mid = new kakao.maps.LatLng(start.getLat(), end.getLng());
+        const path = [start, mid, end];
 
-        polyline = new kakao.maps.Polyline({
-            path: pathData,
+        const polyline = new kakao.maps.Polyline({
+            path: path,
             strokeWeight: 6,
-            strokeColor: '#2C7FFF',
+            strokeColor: '#3182F6', // Primary Blue
             strokeOpacity: 0.9,
             strokeStyle: 'solid'
         });
         polyline.setMap(map);
+        polylines.push(polyline);
 
-        var bounds = new kakao.maps.LatLngBounds();
-        pathData.forEach(p => bounds.extend(p));
+        // 뷰포트 조정
+        const bounds = new kakao.maps.LatLngBounds();
+        bounds.extend(start); bounds.extend(end); bounds.extend(mid);
         map.setBounds(bounds);
     }
 
-    /* 3. 실시간 버스 기능 */
-    var isBusMode = false;
-    var busInterval = null;
-
-    function toggleRealTimeBus() {
-        var btn = document.getElementById('btn-bus');
-        isBusMode = !isBusMode;
-
-        if(isBusMode) {
-            btn.classList.add('active');
-            fetchBusData();
-            busInterval = setInterval(fetchBusData, 10000);
-        } else {
-            btn.classList.remove('active');
-            clearInterval(busInterval);
-            busMarkers.forEach(m => m.setMap(null));
-            busMarkers = [];
-        }
-    }
-
-    async function fetchBusData() {
-        // [필수] 여기에 본인 인증키 입력
-        var serviceKey = '1fe0be0bcba2e3e38d12218b55ae1e841ae702d4290b2b21c9926f38d7c34c1b'; 
-        
-        var lineId = '5200033000'; // 33번 버스
-        var proxy = 'https://api.allorigins.win/raw?url=';
-        var api = `http://apis.data.go.kr/6260000/BusanBims/busInfoByRouteId?serviceKey=${serviceKey}&lineId=${lineId}&numOfRows=10&pageNo=1`;
-
-        try {
-            var res = await fetch(proxy + encodeURIComponent(api));
-            var str = await res.text();
-            var parser = new DOMParser();
-            var xml = parser.parseFromString(str, "text/xml");
-            var items = xml.getElementsByTagName("item");
-
-            busMarkers.forEach(m => m.setMap(null));
-            busMarkers = [];
-
-            if(!items || items.length === 0) return;
-
-            for(var i=0; i<items.length; i++) {
-                var lat = items[i].getElementsByTagName("lat")[0].textContent;
-                var lng = items[i].getElementsByTagName("lng")[0].textContent;
-                
-                var content = `<div style="background:white; padding:4px 8px; border-radius:12px; box-shadow:0 2px 5px rgba(0,0,0,0.2); font-weight:bold; font-size:12px; display:flex; align-items:center;">🚌 33</div>`;
-                var overlay = new kakao.maps.CustomOverlay({
-                    position: new kakao.maps.LatLng(lat, lng),
-                    content: content
-                });
-                overlay.setMap(map);
-                busMarkers.push(overlay);
-            }
-        } catch(e) { console.log("Bus Error:", e); }
+    function getDistance(p1, p2) {
+        // 간단한 거리 계산 (km)
+        const R = 6371;
+        const dLat = (p2.getLat() - p1.getLat()) * Math.PI / 180;
+        const dLon = (p2.getLng() - p1.getLng()) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(p1.getLat() * Math.PI / 180) * Math.cos(p2.getLat() * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
     }
 </script>
 
