@@ -15,7 +15,7 @@
 
         <div class="map-badge" id="map-status-text">📍 내 위치 찾는 중...</div>
 
-        <button class="bus-test-btn" onclick="simulateRealTimeBus()">🚌 버스 보기</button>
+        <button class="bus-test-btn" onclick="simulateRealTimeBus()">🚌 버스 보기 (실시간)</button>
     </div>
 
     <div class="bottom-content-area">
@@ -60,6 +60,7 @@
                 <span>추천 경로</span>
                 <span style="font-size:14px; color:var(--primary);">24분 소요</span>
             </div>
+
             <div class="timeline-container">
                 <div class="timeline-left">
                     <span class="timeline-time">12:36</span>
@@ -69,12 +70,41 @@
                 <div class="timeline-right">
                     <div class="location-title" id="route-start-text">출발지</div>
                 </div>
+
+                <div class="timeline-left">
+                    <div class="timeline-line active"></div>
+                    <span class="timeline-icon">🚶</span>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">도보 1분</div>
+                </div>
+
+                <div class="timeline-left">
+                    <span class="timeline-time">12:42</span>
+                    <div class="timeline-dot active"></div>
+                    <div class="timeline-line active"></div>
+                </div>
+                <div class="timeline-right">
+                    <div class="location-title">정류장 도착</div>
+                     <div class="bus-info-box" onclick="goToStep(3)">
+                        <div style="margin-bottom:5px;">
+                            <span class="bus-tag">곧 도착</span>
+                            <span style="color:var(--primary); font-weight:bold;">33번</span>
+                        </div>
+                        <div class="location-desc">
+                            ⌄ 5분 (정류장 4개) 이동<br>
+                            개금역 경유
+                        </div>
+                    </div>
+                </div>
+
                 <div class="timeline-left">
                      <span class="timeline-icon">🚌</span>
                 </div>
                 <div class="timeline-right">
-                    <div class="location-title">33번 버스 이동</div>
+                    <div class="location-title">버스 이동 중</div>
                 </div>
+
                  <div class="timeline-left">
                     <div class="timeline-dot"></div>
                 </div>
@@ -88,8 +118,23 @@
         </div>
 
         <div id="step-3" class="screen">
-            <div style="text-align:center; padding-top:50px;">
-                <h3>안내 예시 화면입니다</h3>
+            <div class="content-header">버스 기다리는 중</div>
+            <div class="bus-info-box" style="text-align:center; background:white; border:2px solid var(--primary);">
+                <div style="font-size:14px;">33번 버스</div>
+                <div style="font-size:32px; font-weight:bold; color:var(--danger); margin:10px 0;">3분 20초</div>
+                <div style="color:#888;">잠시 후 도착합니다</div>
+            </div>
+            <button class="btn btn-primary" onclick="goToStep(4)">버스 탑승 완료</button>
+        </div>
+
+        <div id="step-4" class="screen">
+            <div class="content-header">이동 중...</div>
+            <button class="btn btn-warning" onclick="goToStep(5)">🔔 하차 벨 누르기</button>
+        </div>
+        
+        <div id="step-5" class="screen">
+            <div style="text-align:center;">
+                <h2>도착!</h2>
                 <button class="btn btn-primary" onclick="goToStep(1)">처음으로</button>
             </div>
         </div>
@@ -101,136 +146,147 @@
 
 <script>
     /* =========================================
-       [기능 1] 지도 및 현재 위치(Geolocation)
+       [기능 1] 지도 및 내 위치 설정
        ========================================= */
     var mapContainer = document.getElementById('map');
     var mapOption = { 
-        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 기본값(서울)
-        level: 4 
+        center: new kakao.maps.LatLng(35.1512, 129.0123), // 기본: 부산 냉정역
+        level: 5 
     };
     var map = new kakao.maps.Map(mapContainer, mapOption);
     
     // 내 위치 마커
     var myMarker = new kakao.maps.Marker({
         position: map.getCenter(), 
-        map: null // 처음엔 숨김
+        map: null 
     });
 
-    // 브라우저 GPS로 현재 위치 가져오기
+    // 브라우저 GPS 사용
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
             var lat = position.coords.latitude;
             var lon = position.coords.longitude;
             var locPosition = new kakao.maps.LatLng(lat, lon);
 
-            // 지도 중심 이동 및 마커 표시
             map.setCenter(locPosition);
             myMarker.setPosition(locPosition);
             myMarker.setMap(map);
             
             document.getElementById('map-status-text').innerText = "📍 현재 내 위치";
-
-        }, function(error) {
-            // GPS 차단 시 기본 위치(부산 서면)로
-            var fallbackLoc = new kakao.maps.LatLng(35.1578, 129.0600);
-            map.setCenter(fallbackLoc);
-            document.getElementById('map-status-text').innerText = "📍 위치 권한 없음 (기본값)";
         });
-    } else {
-        document.getElementById('map-status-text').innerText = "📍 GPS 미지원";
     }
 
+    /* =========================================
+       [기능 2] 실제 버스 API 연동 (CORS 우회)
+       ========================================= */
+    var busMarkers = []; // 버스 마커 관리용 배열
+
+    async function getRealBusData() {
+        const statusText = document.getElementById('map-status-text');
+        
+        // ⚠️ 여기에 공공데이터포털에서 받은 [Decoding 인증키]를 꼭 넣으세요!
+        const serviceKey = '1fe0be0bcba2e3e38d12218b55ae1e841ae702d4290b2b21c9926f38d7c34c1b'; 
+        
+        // 부산 33번 버스 노선 ID
+        const lineId = '5200033000'; 
+        
+        // CORS 우회 서버 (반드시 데모 인증 필요)
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const apiUrl = `http://apis.data.go.kr/6260000/BusanBims/busInfoByRouteId?serviceKey=${serviceKey}&lineId=${lineId}&numOfRows=10&pageNo=1`;
+
+        try {
+            statusText.innerText = "📡 데이터 수신 중...";
+            const response = await fetch(proxyUrl + apiUrl);
+            
+            if (!response.ok) throw new Error("네트워크 오류");
+
+            const str = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(str, "text/xml");
+
+            // 기존 마커 삭제
+            removeBusMarkers();
+
+            const items = xmlDoc.getElementsByTagName("item");
+            if (items.length === 0) {
+                statusText.innerText = "⚠️ 운행 버스 없음";
+                alert("운행 중인 버스가 없거나 인증키 오류입니다.");
+                return;
+            }
+
+            // 지도에 버스 표시
+            for (let i = 0; i < items.length; i++) {
+                const lat = items[i].getElementsByTagName("lat")[0].textContent;
+                const lng = items[i].getElementsByTagName("lng")[0].textContent;
+                const carNo = items[i].getElementsByTagName("carNo")[0].textContent;
+
+                var busPos = new kakao.maps.LatLng(lat, lng);
+                var imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/busStop.png', 
+                    imageSize = new kakao.maps.Size(24, 35); 
+                var markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
+
+                var marker = new kakao.maps.Marker({
+                    position: busPos,
+                    image: markerImage,
+                    map: map,
+                    title: carNo
+                });
+
+                busMarkers.push(marker);
+            }
+
+            statusText.innerText = `🚌 ${items.length}대 운행 중 (실시간)`;
+            
+            // 첫 번째 버스 위치로 이동
+            if(items.length > 0) {
+                const firstLat = items[0].getElementsByTagName("lat")[0].textContent;
+                const firstLng = items[0].getElementsByTagName("lng")[0].textContent;
+                map.panTo(new kakao.maps.LatLng(firstLat, firstLng));
+            }
+
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = "❌ 불러오기 실패";
+            alert("1. 공공데이터 인증키 확인\n2. cors-anywhere 사이트 데모 버튼 클릭 확인");
+        }
+    }
+
+    function removeBusMarkers() {
+        for (var i = 0; i < busMarkers.length; i++) {
+            busMarkers[i].setMap(null);
+        }
+        busMarkers = [];
+    }
 
     /* =========================================
-       [기능 2] 즐겨찾기 수정 및 사용
+       [기능 3] 즐겨찾기 및 UI 로직
        ========================================= */
-    // 즐겨찾기 데이터 변수
-    let favoriteData = {
-        title: "집 → 학교",
-        desc: "33번 버스 이용",
-        start: "집",
-        end: "학교"
-    };
+    let favoriteData = { title: "집 → 학교", desc: "33번 버스 이용", start: "집", end: "학교" };
 
-    // 즐겨찾기 클릭 시 입력창 채우기
     function useFavorite() {
         document.getElementById('start-input').value = favoriteData.start;
         document.getElementById('end-input').value = favoriteData.end;
-        alert(`'${favoriteData.title}' 경로가 설정되었습니다.`);
+        alert(`'${favoriteData.title}' 경로 설정됨`);
     }
 
-    // 즐겨찾기 수정 (톱니바퀴 클릭)
     function editFavorite(event) {
-        event.stopPropagation(); // 부모 클릭 방지
+        event.stopPropagation();
+        const newTitle = prompt("즐겨찾기 이름:", favoriteData.title);
+        if(!newTitle) return;
+        const newDesc = prompt("설명:", favoriteData.desc);
         
-        const newTitle = prompt("즐겨찾기 이름을 입력하세요:", favoriteData.title);
-        if(!newTitle) return; // 취소하면 종료
-
-        const newDesc = prompt("설명을 입력하세요:", favoriteData.desc);
-        
-        // 데이터 업데이트
         favoriteData.title = newTitle;
         if(newDesc) favoriteData.desc = newDesc;
 
-        // 화면 업데이트
         document.getElementById('fav-title').innerText = favoriteData.title;
         document.getElementById('fav-desc').innerText = favoriteData.desc;
     }
 
-
-    /* =========================================
-       [기능 3] 실시간 버스 시뮬레이션 (핵심!)
-       ========================================= */
-    // 실제 버스 API는 서버(Backend)가 필요합니다. 
-    // 여기서는 HTML만으로 작동하는 '시뮬레이션'을 보여드립니다.
-    
-    let busMarker = null; // 버스 마커
-
     function simulateRealTimeBus() {
-        alert("🚌 실시간 버스 위치를 지도에 표시합니다. (시뮬레이션)");
-
-        // 1. 현재 지도 중심 가져오기
-        var center = map.getCenter();
-        
-        // 2. 버스 아이콘 이미지 설정 (카카오 예제 이미지)
-        var imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/busStop.png', 
-            imageSize = new kakao.maps.Size(24, 35); 
-        var markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
-
-        // 3. 버스 마커 생성
-        if(busMarker) busMarker.setMap(null); // 기존 마커 삭제
-        busMarker = new kakao.maps.Marker({
-            position: center,
-            image: markerImage,
-            map: map
-        });
-
-        // 4. 버스 움직이기 (0.5초마다 조금씩 이동)
-        let step = 0;
-        const interval = setInterval(() => {
-            // 현재 위치에서 조금씩 위/오른쪽으로 이동 계산
-            const newLat = center.getLat() + (step * 0.0001);
-            const newLng = center.getLng() + (step * 0.0001);
-            const newPos = new kakao.maps.LatLng(newLat, newLng);
-            
-            busMarker.setPosition(newPos); // 마커 이동
-            map.panTo(newPos); // 지도도 따라가기
-            
-            document.getElementById('map-status-text').innerText = `🚌 버스 이동 중... (속도 40km)`;
-
-            step++;
-            if(step > 50) { // 50번 움직이면 멈춤
-                clearInterval(interval);
-                document.getElementById('map-status-text').innerText = "📍 버스 도착!";
-                alert("버스가 정류장에 도착했습니다!");
-            }
-        }, 300); // 0.3초마다 갱신
+        // [버스 보기] 버튼 클릭 시 실행
+        getRealBusData();
     }
 
-
-    /* =========================================
-       [기타] 화면 전환 및 자동완성
-       ========================================= */
     function goToStep(stepNumber) {
         if(stepNumber === 2) {
              const startVal = document.getElementById('start-input').value;
@@ -238,7 +294,6 @@
              document.getElementById('route-start-text').textContent = startVal || "출발지";
              document.getElementById('route-end-text').textContent = endVal || "도착지";
         }
-
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         const targetScreen = document.getElementById(`step-${stepNumber}`);
         if(targetScreen) targetScreen.classList.add('active');
