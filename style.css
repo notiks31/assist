@@ -2,13 +2,13 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 :root {
-    --primary: #3182F6;       /* 토스/잡다 블루 */
+    --primary: #3182F6;       
     --primary-dark: #2369cf;  
     --text-main: #191F28;     
     --text-sub: #8B95A1;      
     --bg-base: #F2F4F6;       
     --white: #FFFFFF;
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.15); /* 그림자 조금 더 부드럽게 */
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     --radius-l: 24px;         
     --radius-m: 16px;         
 }
@@ -37,25 +37,6 @@ body {
     z-index: 0;
 }
 
-/* [상단 중앙 편의점 버튼] */
-.top-center-btn {
-    position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-    z-index: 10;
-}
-
-.pill-btn {
-    background: var(--white);
-    padding: 10px 20px; border-radius: 100px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(0,0,0,0.05); /* 미세한 테두리 추가 */
-    font-size: 15px; font-weight: 600; color: var(--text-main);
-    display: flex; align-items: center; gap: 8px;
-    cursor: pointer; transition: transform 0.1s;
-}
-.pill-btn:active { transform: translateX(-50%) scale(0.95); }
-.pill-btn span { font-size: 18px; }
-
-
 /* [우측 하단 플로팅 메뉴 그룹] */
 .floating-menu {
     position: absolute; bottom: 120px; right: 20px;
@@ -63,7 +44,6 @@ body {
     display: flex; flex-direction: column; align-items: center; gap: 14px;
 }
 
-/* 숨겨질 버튼들 (위치, 교통) - 쫀득한 애니메이션 적용 */
 .menu-item {
     width: 50px; height: 50px; border-radius: 50%;
     background: var(--white); border: none;
@@ -72,55 +52,32 @@ body {
     display: flex; justify-content: center; align-items: center;
     cursor: pointer;
     font-size: 22px;
-    
-    /* 기본 상태: 숨김 & 작아짐 & 아래로 이동 */
-    opacity: 0; 
-    transform: translateY(20px) scale(0.5);
+    opacity: 0; transform: translateY(20px) scale(0.5);
     pointer-events: none;
-    
-    /* 애니메이션 설정 (나올 때 팅~ 하는 느낌) */
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 메뉴가 열렸을 때 */
 .floating-menu.open .menu-item {
-    opacity: 1; 
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
+    opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;
 }
+.floating-menu.open .menu-item:nth-child(1) { transition-delay: 0.1s; } 
+.floating-menu.open .menu-item:nth-child(2) { transition-delay: 0.05s; }
 
-/* 순차적으로 나오게 딜레이 주기 (들어갔다 나오는 느낌 강화) */
-.floating-menu.open .menu-item:nth-child(1) { transition-delay: 0.1s; } /* 위쪽 버튼 */
-.floating-menu.open .menu-item:nth-child(2) { transition-delay: 0.05s; } /* 아래쪽 버튼 */
-
-
-/* [메인 토글 버튼 (화살표)] */
+/* 토글 버튼 */
 .toggle-btn {
     width: 56px; height: 56px; border-radius: 50%;
-    background: var(--white); /* 요청하신 밝은 색(흰색)으로 변경 */
-    color: var(--text-main);  /* 아이콘은 검정색 */
-    border: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2); /* 그림자 강조 */
+    background: var(--white); color: var(--text-main); border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     display: flex; justify-content: center; align-items: center;
     cursor: pointer; z-index: 21;
     transition: background 0.3s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .toggle-btn svg { 
-    width: 28px; height: 28px; 
-    fill: var(--text-main); 
-    transition: transform 0.4s ease; /* 회전 애니메이션 */
+    width: 28px; height: 28px; fill: var(--text-main); 
+    transition: transform 0.4s ease; 
 }
-
-/* 토글 열림 상태 */
-.floating-menu.open .toggle-btn {
-    background: var(--text-main); /* 열리면 배경 검정 */
-}
-.floating-menu.open .toggle-btn svg { 
-    fill: var(--white); /* 열리면 아이콘 흰색 */
-    transform: rotate(180deg); /* 180도 회전해서 아래를 가리킴 */
-}
-
+.floating-menu.open .toggle-btn { background: var(--text-main); }
+.floating-menu.open .toggle-btn svg { fill: var(--white); transform: rotate(180deg); }
 
 /* [Bottom Sheet] */
 .bottom-sheet {
@@ -142,7 +99,6 @@ body {
 .handle-bar { width: 36px; height: 4px; background: #E0E0E0; border-radius: 10px; }
 .sheet-content { padding: 0 24px 40px 24px; overflow-y: auto; }
 
-/* 검색창 디자인 */
 .search-bar {
     background: var(--bg-base); border-radius: var(--radius-m);
     padding: 14px 16px; margin-bottom: 20px;
@@ -150,7 +106,6 @@ body {
 }
 .placeholder { color: #ADB5BD; font-weight: 500; font-size: 16px; }
 
-/* 상세 검색 폼 */
 .search-form { display: none; } 
 .bottom-sheet.expanded .search-form { display: block; }
 .bottom-sheet.expanded .search-bar { display: none; }
@@ -182,3 +137,8 @@ body {
 .t-dot { position:absolute; left:-19px; top:5px; width:10px; height:10px; border-radius:50%; background:white; border:2px solid #ccc; z-index:2; }
 .t-dot.end { border-color: var(--primary); background: var(--primary); }
 .t-text { font-weight: 700; font-size: 15px; }
+.t-desc { font-size: 13px; color: var(--text-sub); margin-top: 2px; }
+.pill-btn {
+    background: var(--bg-base); padding: 6px 12px; border-radius: 20px; border:none;
+    font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer;
+}
