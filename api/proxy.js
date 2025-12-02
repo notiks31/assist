@@ -20,7 +20,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 4. 클라이언트(HTML)에서 보낸 좌표 데이터 받기
         const { startX, startY, endX, endY } = req.body;
         const tmapUrl = "https://apis.openapi.sk.com/transit/routes";
         
