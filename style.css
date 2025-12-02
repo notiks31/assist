@@ -1,152 +1,191 @@
-/* [Global Settings] */
+/* [Global Settings & Fonts] */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
 :root {
-    --primary: #2C7FFF;       /* 선명한 블루 */
-    --accent: #FF3B30;        /* 강조 레드 */
-    --text-main: #1C1C1E;     /* 짙은 검정 */
-    --text-sub: #8E8E93;      /* 회색 */
-    --bg-sheet: #FFFFFF;
-    --shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    --primary: #3182F6;       /* 트렌디한 토스/삼성 블루 */
+    --primary-light: #E8F3FF; /* 연한 블루 배경 */
+    --text-main: #191F28;     /* 진한 검정 (가독성) */
+    --text-sub: #8B95A1;      /* 부드러운 회색 */
+    --bg-base: #F2F4F6;       /* 앱 배경색 */
+    --white: #FFFFFF;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.08); /* 부드러운 그림자 */
+    --radius-l: 24px;         /* 둥근 모서리 (Large) */
+    --radius-m: 16px;         /* 둥근 모서리 (Medium) */
+    --radius-s: 12px;         /* 둥근 모서리 (Small) */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
     margin: 0; padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
-    background-color: #f2f2f7;
-    height: 100vh;
-    height: 100dvh; /* 모바일 브라우저 주소창 대응 */
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background-color: var(--bg-base);
+    height: 100dvh; /* 모바일 풀스크린 */
     overflow: hidden;
     display: flex; justify-content: center;
 }
 
 .app-frame {
     width: 100%; max-width: 480px; height: 100%;
-    position: relative;
-    background: white;
+    position: relative; background: var(--white);
     display: flex; flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.1);
 }
 
-/* [지도 레이어 - 배경] */
+/* [지도 레이어] */
 #map {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0; /* 가장 뒤로 */
+    z-index: 0;
 }
 
-/* [상단 버튼 (버스 모드)] */
+/* [상단 플로팅 버튼 그룹] */
 .top-controls {
-    position: absolute; top: 20px; right: 20px;
-    z-index: 10; /* 지도보다 위에 */
+    position: absolute; top: 20px; left: 20px; right: 20px;
+    z-index: 10; display: flex; gap: 10px;
+    pointer-events: none; /* 빈 공간 터치 통과 */
 }
 
-.btn-floating {
-    background: white; border: none;
-    width: 48px; height: 48px; border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+/* 알약 모양 버튼 (편의점, 교통 등) */
+.pill-btn {
+    pointer-events: auto;
+    background: var(--white);
+    padding: 10px 16px; border-radius: 100px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.02);
+    font-size: 14px; font-weight: 600; color: var(--text-main);
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pill-btn:active { transform: scale(0.96); background: #f9f9f9; }
+.pill-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.pill-btn.active svg { fill: white; }
+
+/* 우측 상단 그룹 */
+.top-right { margin-left: auto; display: flex; gap: 10px; }
+
+/* [내 위치 버튼] */
+.my-loc-btn {
+    position: absolute; bottom: calc(35% + 20px); right: 20px; z-index: 10;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--white);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: none; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
-    cursor: pointer; transition: transform 0.1s;
+    transition: transform 0.2s;
 }
-.btn-floating:active { transform: scale(0.95); background: #f5f5f5; }
-.btn-floating svg { width: 24px; height: 24px; fill: #333; }
-.btn-floating.active { background: var(--primary); }
-.btn-floating.active svg { fill: white; }
+.my-loc-btn:active { transform: scale(0.9); }
+.my-loc-btn svg { stroke: var(--text-main); }
 
-/* [하단 시트 (핵심 UI)] */
+/* [Bottom Sheet - 잡다 스타일 카드] */
 .bottom-sheet {
     position: absolute; bottom: 0; left: 0; right: 0;
-    background: var(--bg-sheet);
-    border-top-left-radius: 24px; border-top-right-radius: 24px;
-    box-shadow: var(--shadow);
-    z-index: 100; /* 최상단 */
-    padding: 24px 24px 40px 24px; /* 하단 여백 충분히 확보 */
-    display: flex; flex-direction: column;
-    transition: transform 0.3s ease-in-out;
+    background: var(--white);
+    border-top-left-radius: var(--radius-l);
+    border-top-right-radius: var(--radius-l);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.08);
+    z-index: 100;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(0);
+    max-height: 85%; display: flex; flex-direction: column;
 }
 
-/* 핸들바 (드래그 느낌) */
-.sheet-handle {
-    width: 36px; height: 4px; background: #E5E5EA;
-    border-radius: 2px; margin: -10px auto 20px auto;
+/* 시트 상태: 접힘 vs 펼침 */
+.bottom-sheet.collapsed { transform: translateY(calc(100% - 150px)); }
+.bottom-sheet.expanded { transform: translateY(0); }
+
+/* 드래그 핸들바 영역 */
+.sheet-header {
+    padding: 16px 0 8px 0; display: flex; justify-content: center; cursor: pointer;
+}
+.handle-bar {
+    width: 36px; height: 4px; background: #E0E0E0; border-radius: 10px;
 }
 
-/* 입력창 스타일 */
-.input-group {
-    background: #F5F6F8; border-radius: 16px;
-    padding: 0 16px; margin-bottom: 16px;
+.sheet-content {
+    padding: 0 24px 40px 24px; overflow-y: auto;
+}
+
+/* 타이틀 텍스트 */
+.sheet-title {
+    font-size: 22px; font-weight: 700; color: var(--text-main);
+    margin-bottom: 20px; letter-spacing: -0.5px;
+}
+
+/* [입력 폼 - 깔끔한 박스 스타일] */
+.input-container {
+    background: var(--bg-base); border-radius: var(--radius-m);
+    padding: 4px 16px; margin-bottom: 20px;
 }
 
 .input-row {
-    display: flex; align-items: center; height: 56px;
-    border-bottom: 1px solid #E5E5EA;
+    display: flex; align-items: center; height: 52px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .input-row:last-child { border-bottom: none; }
 
-.dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 12px; flex-shrink: 0;}
-.dot.blue { background: var(--primary); }
-.dot.red { background: var(--accent); }
+.dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 12px; flex-shrink: 0; }
+.dot.start { background: var(--text-sub); }
+.dot.end { background: var(--primary); box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.2); }
 
 .input-field {
     border: none; background: transparent; outline: none;
-    font-size: 16px; font-weight: 600; color: var(--text-main);
+    font-size: 16px; font-weight: 500; color: var(--text-main);
     width: 100%; height: 100%;
 }
-.input-field::placeholder { color: #AEAEB2; font-weight: 500; }
+.input-field::placeholder { color: #ADB5BD; }
 
-/* 메인 버튼 (확인/검색) */
-.btn-primary {
-    background: var(--primary); color: white;
-    border: none; width: 100%; height: 56px;
-    border-radius: 16px;
-    font-size: 17px; font-weight: 700;
-    cursor: pointer; margin-top: 8px;
-    box-shadow: 0 4px 10px rgba(44, 127, 255, 0.3);
-}
-.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-
-/* 빠른 검색 칩 */
-.chip-container { display: flex; gap: 10px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 5px; }
+/* [빠른 검색 칩] */
+.chip-group { display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px; }
 .chip {
-    background: white; border: 1px solid #E5E5EA;
-    padding: 8px 14px; border-radius: 20px;
-    font-size: 13px; font-weight: 600; color: #555;
+    background: var(--white); border: 1px solid #E5E8EB;
+    padding: 8px 14px; border-radius: 100px;
+    font-size: 13px; font-weight: 600; color: var(--text-main);
     white-space: nowrap; cursor: pointer;
+    transition: all 0.2s;
 }
-.chip:active { background: #F5F6F8; }
+.chip:active { background: var(--bg-base); transform: scale(0.97); }
+.chip.blue { color: var(--primary); background: var(--primary-light); border-color: transparent; }
 
-/* [결과 화면 스타일] */
-.result-view { display: none; } /* 평소엔 숨김 */
-.result-view.show { display: block; }
-
-.route-summary {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 20px;
+/* [메인 버튼 - 파란색 강조] */
+.btn-primary {
+    width: 100%; height: 56px;
+    background: var(--primary); color: white;
+    border: none; border-radius: var(--radius-m);
+    font-size: 17px; font-weight: 700;
+    cursor: pointer; transition: transform 0.1s;
+    box-shadow: 0 4px 12px rgba(49, 130, 246, 0.3);
 }
-.time-big { font-size: 28px; font-weight: 800; color: var(--text-main); }
-.dist-small { font-size: 14px; color: var(--text-sub); font-weight: 500; margin-left: 8px;}
+.btn-primary:active { transform: scale(0.98); }
 
-/* 타임라인 비주얼 */
-.timeline {
-    position: relative; padding-left: 24px; margin-top: 10px;
+/* [결과 카드] */
+.result-card {
+    background: var(--white); border: 1px solid #F2F4F6;
+    border-radius: var(--radius-m); padding: 20px;
+    display: none; animation: fadeIn 0.3s;
 }
+.result-card.active { display: block; }
+
+.route-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+.time-display { font-size: 26px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+.time-sub { font-size: 14px; color: var(--text-sub); font-weight: 500; margin-left: 6px; }
+
+/* 타임라인 디자인 */
+.timeline { position: relative; padding-left: 20px; margin-top: 12px; }
 .timeline::before {
-    content: ''; position: absolute; left: 7px; top: 5px; bottom: 5px;
-    width: 2px; background: #E5E5EA;
+    content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px;
+    width: 2px; background: #E5E8EB;
 }
-.t-item { position: relative; margin-bottom: 24px; }
-.t-point {
-    position: absolute; left: -21px; top: 4px;
+.t-item { position: relative; margin-bottom: 20px; }
+.t-dot {
+    position: absolute; left: -19px; top: 5px;
     width: 10px; height: 10px; border-radius: 50%;
-    background: white; border: 3px solid #ccc;
-    z-index: 2;
+    background: var(--white); border: 2px solid #ccc; z-index: 2;
 }
-.t-point.start { border-color: var(--primary); }
-.t-point.end { border-color: var(--accent); }
-.t-point.bus { 
-    width: 16px; height: 16px; left: -24px; top: 0; border: none; background: none; font-size: 16px;
-}
-
-.t-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
+.t-dot.start { border-color: var(--text-main); background: var(--text-main); }
+.t-dot.end { border-color: var(--primary); background: var(--primary); }
+.t-title { font-size: 15px; font-weight: 700; color: var(--text-main); }
 .t-desc { font-size: 13px; color: var(--text-sub); margin-top: 2px; }
 
 /* 유틸리티 */
 .hidden { display: none !important; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
