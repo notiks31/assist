@@ -1,20 +1,24 @@
 // api/proxy.js
 
 export default async function handler(req, res) {
-    // 1. CORS 허용 설정 (내 웹사이트에서만 접속 가능하게 하려면 * 대신 주소 입력)
+    // 1. CORS 헤더 설정: 모든 출처(*)에서 요청을 허용합니다.
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // 2. 브라우저가 "보내도 돼?" 하고 물어보는 예비 요청(OPTIONS) 처리
+    // 2. OPTIONS (예비 요청) 처리: CORS 정책 확인용 요청에 성공 응답을 보냅니다.
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
-    // 3. TMAP API 키 (여기다 적으면 남들은 절대 볼 수 없습니다!)
-    // 따옴표 안에 곰돌이님의 TMAP 키를 넣으세요.
-    const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
+    // 3. TMAP API 키를 Vercel 환경 변수에서 가져옵니다. 
+    // TMAP_KEY 변수가 Vercel 설정에 있어야 합니다!
+    const TMAP_APP_KEY = process.env.TMAP_KEY; 
+
+    if (!TMAP_APP_KEY) {
+        return res.status(500).json({ error: "서버 오류: TMAP_KEY 환경 변수가 설정되지 않았습니다." });
+    }
 
     try {
         // 4. 클라이언트(HTML)에서 보낸 좌표 데이터 받기
@@ -28,7 +32,7 @@ export default async function handler(req, res) {
             count: 1, format: "json"
         };
 
-        // 5. TMAP 서버로 진짜 요청 보내기
+        // 5. TMAP 서버로 요청 보내기
         const response = await fetch(tmapUrl, {
             method: "POST",
             headers: { 
@@ -38,13 +42,19 @@ export default async function handler(req, res) {
             body: JSON.stringify(payload)
         });
 
+        // 6. TMAP API 응답 상태 확인
+        if (!response.ok) {
+             const errorData = await response.json();
+             return res.status(response.status).json({ error: "TMAP API 호출 실패", details: errorData });
+        }
+
         const data = await response.json();
 
-        // 6. 결과를 내 앱으로 돌려주기
+        // 7. 결과를 프런트엔드로 돌려주기
         res.status(200).json(data);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' });
+        console.error("PROXY ERROR:", error);
+        res.status(500).json({ error: '서버 내부 오류가 발생했습니다.', details: error.message });
     }
 }
