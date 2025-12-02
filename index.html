@@ -141,7 +141,7 @@
     }
 
     /* -------------------------------------------
-       [3] 하이브리드 검색 (안전장치 강화)
+       [3] 하이브리드 검색 (수정됨: 프록시 변경 및 에러 핸들링)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
@@ -175,7 +175,8 @@
     }
 
     async function fetchTmapDataAndRender(start, end) {
-        const proxy = 'https://corsproxy.io/?'; 
+        // [수정] 더 안정적인 cors-anywhere 프록시 사용
+        const proxy = 'https://cors-anywhere.herokuapp.com/'; 
         const url = "https://apis.openapi.sk.com/transit/routes";
         
         const payload = {
@@ -185,13 +186,29 @@
         };
 
         try {
-            const response = await fetch(proxy + encodeURIComponent(url), {
+            console.log("TMAP API 요청 중...");
+            const response = await fetch(proxy + url, {
                 method: "POST",
-                headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
+                headers: { 
+                    "appKey": TMAP_APP_KEY, 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest" // 필수 헤더 추가
+                },
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error("TMAP API Error");
+            if (!response.ok) {
+                // 에러 발생 시 상세 내용 확인
+                const errText = await response.text();
+                console.error("API Error Status:", response.status);
+                console.error("API Error Details:", errText);
+                
+                if(response.status === 403) {
+                     alert("⚠️ 중요: 데모 서버 권한이 필요합니다.\n콘솔 로그의 링크를 확인하거나 'cors-anywhere demo'를 검색해 승인해주세요.");
+                }
+                throw new Error(`API 응답 오류: ${response.status}`);
+            }
+
             const data = await response.json();
             
             if (!data.metaData || !data.metaData.plan) {
@@ -263,7 +280,7 @@
 
         } catch (e) {
             console.error(e);
-            alert("경로를 불러올 수 없습니다. (CORS 또는 API 키 확인)");
+            alert("경로를 불러올 수 없습니다.\n(F12 개발자 도구의 콘솔을 확인하세요)");
         }
     }
 
