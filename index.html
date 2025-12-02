@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Real Navigation</title>
+    <title>Real Transit Map</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -43,31 +43,20 @@
                     <button class="pill-btn" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
                     <button class="pill-btn" onclick="fillSearch('현위치', '회사')">🏢 회사로</button>
                 </div>
-                <button class="btn-search" onclick="findRealRoute()">경로 검색</button>
+                <button class="btn-search" onclick="findTmapRoute()">대중교통 경로 검색</button>
             </div>
 
             <div id="resultCard" class="result-card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="time-info" id="timeInfo">계산 중...</div>
+                    <div class="time-info" id="totalTime">00분</div>
                     <button class="pill-btn" onclick="resetSearch()">다시 검색</button>
                 </div>
-                <div class="sub-info" id="distInfo">경로를 탐색하고 있습니다.</div>
+                <div class="sub-info" id="routeSummary">최적 경로를 찾는 중...</div>
 
-                <div class="timeline">
-                    <div class="t-item">
-                        <div class="t-dot"></div>
-                        <div class="t-text" id="resStart">출발지</div>
+                <div class="timeline" id="routeTimeline">
                     </div>
-                    <div class="t-item">
-                        <div class="t-dot" style="background:#eee; border:none; width:6px; height:6px; left:-17px;"></div>
-                        <div class="t-text" style="color:#3182F6;">자동차/택시 이동</div>
-                        <div class="t-desc">실제 도로 경로 (Kakao Mobility)</div>
-                    </div>
-                    <div class="t-item">
-                        <div class="t-dot end"></div>
-                        <div class="t-text" id="resEnd">도착지</div>
-                    </div>
-                </div>
+                
+                <button class="btn-search" style="margin-top:16px; background:#191F28;" onclick="resetSearch()">안내 종료</button>
             </div>
         </div>
     </div>
@@ -77,34 +66,31 @@
 
 <script>
     /* -------------------------------------------
-       [1] 설정 및 초기화
+       [1] 초기화 및 변수 설정
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
     const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 7 };
     const map = new kakao.maps.Map(mapContainer, mapOption);
     const ps = new kakao.maps.services.Places();
     
-    // 객체 관리
     let markers = [];
     let polylines = [];
     let isTrafficOn = false;
 
-    // ★★★ [필수] 카카오 REST API 키 (JavaScript 키 아님!) ★★★
-    // 여기에 본인의 [REST API 키]를 넣어주세요.
-    const REST_API_KEY = '321cd592b1f0ffce312bb7de8fb5db11'; 
+    // ★★★ [필수] TMAP App Key 입력 (SK Open API) ★★★
+    // https://tmapapi.sktelecom.com/ 에서 발급받은 'App Key'를 넣으세요.
+    const TMAP_APP_KEY = '여기에_TMAP_APP_KEY를_넣으세요'; 
 
     window.onload = () => moveToCurrentLocation();
 
     /* -------------------------------------------
-       [2] UI 및 기능 (토글, 위치)
+       [2] UI 기능 (토글, 위치 등)
        ------------------------------------------- */
-    function toggleMenu() {
-        document.getElementById('floatingMenu').classList.toggle('open');
-    }
+    function toggleMenu() { document.getElementById('floatingMenu').classList.toggle('open'); }
 
     function moveToCurrentLocation() {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((pos) => {
+            navigator.geolocation.getCurrentPosition(pos => {
                 const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
                 const content = `<div style="width:20px; height:20px; background:#3182F6; border:3px solid white; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></div>`;
                 new kakao.maps.CustomOverlay({ map: map, position: loc, content: content });
@@ -114,13 +100,8 @@
     }
 
     function toggleTraffic() {
-        if (isTrafficOn) {
-            map.removeOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
-            isTrafficOn = false;
-        } else {
-            map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
-            isTrafficOn = true;
-        }
+        if (isTrafficOn) { map.removeOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC); isTrafficOn = false; }
+        else { map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC); isTrafficOn = true; }
     }
 
     /* -------------------------------------------
@@ -157,127 +138,179 @@
     }
 
     /* -------------------------------------------
-       [4] 핵심: 카카오 모빌리티 길찾기 (Real Route)
+       [4] 핵심: TMAP 대중교통 API 연동
        ------------------------------------------- */
-    async function findRealRoute() {
+    async function findTmapRoute() {
         const sVal = document.getElementById('startInput').value;
         const eVal = document.getElementById('endInput').value;
         if(!sVal || !eVal) return alert('출발/도착지를 입력하세요');
 
-        // 1. 장소 검색하여 좌표 얻기
+        // 1. 카카오 API로 장소 좌표 검색
         const sCoord = await getCoords(sVal);
         const eCoord = await getCoords(eVal);
         
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
-        // 2. 길찾기 API 호출 및 선 그리기
-        await getCarDirection(sCoord, eCoord);
+        // 2. TMAP API 호출
+        await callTmapTransit(sCoord, eCoord);
 
-        // 3. 결과창 업데이트
+        // 3. UI 업데이트
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
-        document.getElementById('resStart').innerText = sVal;
-        document.getElementById('resEnd').innerText = eVal;
     }
 
-    // 좌표 검색 함수
     function getCoords(keyword) {
         return new Promise(resolve => {
             if(keyword.includes("현위치")) {
-                navigator.geolocation.getCurrentPosition(pos => resolve({lng: pos.coords.longitude, lat: pos.coords.latitude}));
+                navigator.geolocation.getCurrentPosition(pos => resolve({lng: pos.coords.longitude, lat: pos.coords.latitude, name: "현위치"}));
             } else {
                 ps.keywordSearch(keyword, (data, status) => {
-                    if(status === kakao.maps.services.Status.OK) resolve({lng: parseFloat(data[0].x), lat: parseFloat(data[0].y)});
+                    if(status === kakao.maps.services.Status.OK) resolve({lng: data[0].x, lat: data[0].y, name: data[0].place_name});
                     else resolve(null);
                 });
             }
         });
     }
 
-    // ★ 카카오 모빌리티 API 호출 함수 (핵심) ★
-    async function getCarDirection(start, end) {
-        const url = 'https://apis-navi.kakaomobility.com/v1/directions';
+    // ★ TMAP 대중교통 API 호출 함수 ★
+    async function callTmapTransit(start, end) {
+        // TMAP 대중교통 경로탐색 API URL
+        const url = "https://apis.openapi.sk.com/transit/routes";
         
-        // 파라미터: origin, destination (lng,lat 순서)
-        const origin = `${start.lng},${start.lat}`;
-        const destination = `${end.lng},${end.lat}`;
-        
-        const queryParams = new URLSearchParams({
-            origin: origin,
-            destination: destination,
-            priority: 'RECOMMEND' // 추천 경로
-        });
-
-        const requestUrl = `${url}?${queryParams}`;
+        const payload = {
+            startX: start.lng,
+            startY: start.lat,
+            endX: end.lng,
+            endY: end.lat,
+            count: 1, // 경로 1개만 요청
+            lang: 0,
+            format: "json"
+        };
 
         try {
-            const response = await fetch(requestUrl, {
-                method: 'GET',
+            const response = await fetch(url, {
+                method: "POST",
                 headers: {
-                    'Authorization': `KakaoAK ${REST_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
+                    "appKey": TMAP_APP_KEY,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                throw new Error(`API 오류: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error("TMAP API Error");
             const data = await response.json();
             
-            // 기존 맵 초기화
+            // 데이터 파싱
+            const itinerary = data.metaData.plan.itineraries[0]; // 첫 번째 추천 경로
+            const totalTime = Math.round(itinerary.totalTime / 60); // 분 단위
+            const totalFare = itinerary.fare.regular.totalFare;
+            const transferCnt = itinerary.transferCount;
+
+            // 상단 정보 업데이트
+            document.getElementById('totalTime').innerText = `${totalTime}분`;
+            document.getElementById('routeSummary').innerText = `요금 ${totalFare}원 • 환승 ${transferCnt}회`;
+
+            // 맵 초기화
             polylines.forEach(p => p.setMap(null)); polylines = [];
             markers.forEach(m => m.setMap(null)); markers = [];
 
-            // 마커 찍기
-            new kakao.maps.Marker({map: map, position: new kakao.maps.LatLng(start.lat, start.lng)});
-            new kakao.maps.Marker({map: map, position: new kakao.maps.LatLng(end.lat, end.lng)});
+            // 마커 생성
+            createMarker(start.lat, start.lng, 'start');
+            createMarker(end.lat, end.lng, 'end');
 
-            // ★ 경로 데이터 파싱 (Vertex 처리) ★
-            const linePath = [];
-            const routes = data.routes[0];
-            const section = routes.sections[0];
+            // 타임라인 HTML 생성 준비
+            const timelineBox = document.getElementById('routeTimeline');
+            timelineBox.innerHTML = ''; // 초기화
             
-            // 도로 정보(roads) 안에 있는 vertexes 배열을 풀어서 경로 만듦
-            section.roads.forEach(router => {
-                router.vertexes.forEach((vertex, index) => {
-                    // vertexes는 [lng, lat, lng, lat...] 순서로 옴
-                    if (index % 2 === 0) {
-                        linePath.push(new kakao.maps.LatLng(router.vertexes[index + 1], router.vertexes[index]));
-                    }
-                });
-            });
+            // 출발점 타임라인
+            addTimelineItem('출발', start.name, 'start');
 
-            // 지도에 선 그리기
-            const polyline = new kakao.maps.Polyline({
-                path: linePath,
-                strokeWeight: 6,
-                strokeColor: '#3182F6', // 토스 블루
-                strokeOpacity: 0.8,
-                strokeStyle: 'solid'
-            });
-            polyline.setMap(map);
-            polylines.push(polyline);
-
-            // 지도 범위 재설정
+            // 경로 그리기 및 타임라인 추가
+            const legs = itinerary.legs;
             const bounds = new kakao.maps.LatLngBounds();
-            linePath.forEach(latlng => bounds.extend(latlng));
+
+            legs.forEach(leg => {
+                // 선 그리기 (LineString)
+                if (leg.passShape) {
+                    const path = parsePassShape(leg.passShape);
+                    const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6'; // 도보:회색, 버스:파랑
+                    const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
+                    
+                    const polyline = new kakao.maps.Polyline({
+                        path: path,
+                        strokeWeight: 6,
+                        strokeColor: color,
+                        strokeOpacity: 0.8,
+                        strokeStyle: style
+                    });
+                    polyline.setMap(map);
+                    polylines.push(polyline);
+                    
+                    path.forEach(p => bounds.extend(p));
+                }
+
+                // 타임라인 아이템 추가
+                if (leg.mode === 'BUS' || leg.mode === 'SUBWAY') {
+                    const routeName = leg.route; // 버스 번호 or 지하철 호선
+                    const sectionTime = Math.round(leg.sectionTime / 60);
+                    addTimelineItem('bus', `${routeName} 승차`, `${sectionTime}분 이동`);
+                } else if (leg.mode === 'WALK' && leg.sectionTime > 120) { // 2분 이상 걷는 경우만 표시
+                    const sectionTime = Math.round(leg.sectionTime / 60);
+                    addTimelineItem('walk', `도보 이동`, `${sectionTime}분`);
+                }
+            });
+
+            // 도착점 타임라인
+            addTimelineItem('도착', end.name, 'end');
+
             map.setBounds(bounds);
 
-            // 시간 및 거리 정보 업데이트
-            const duration = routes.summary.duration; // 초 단위
-            const distance = routes.summary.distance; // 미터 단위
-            
-            const min = Math.round(duration / 60);
-            const km = (distance / 1000).toFixed(1);
-
-            document.getElementById('timeInfo').innerText = `${min}분`;
-            document.getElementById('distInfo').innerText = `총 거리 ${km}km • 택시비 약 ${routes.summary.fare.taxi}원`;
-
-        } catch (error) {
-            console.error(error);
-            alert('경로를 불러오지 못했습니다. (CORS 확장프로그램 확인 필요)');
+        } catch (e) {
+            console.error(e);
+            alert("경로를 찾을 수 없습니다. (TMAP 키 확인 필요)");
         }
+    }
+
+    // TMAP 좌표 문자열 파싱 (lon,lat lon,lat ...)
+    function parsePassShape(passShape) {
+        const path = [];
+        const coords = passShape.split(' ');
+        coords.forEach(c => {
+            const [lng, lat] = c.split(',');
+            path.push(new kakao.maps.LatLng(lat, lng));
+        });
+        return path;
+    }
+
+    function createMarker(lat, lng, type) {
+        const color = type === 'start' ? '#191F28' : '#3182F6';
+        const content = `<div style="width:14px; height:14px; background:${color}; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
+        const overlay = new kakao.maps.CustomOverlay({ map: map, position: new kakao.maps.LatLng(lat, lng), content: content });
+        markers.push(overlay);
+    }
+
+    function addTimelineItem(type, title, desc) {
+        const box = document.getElementById('routeTimeline');
+        let dotClass = '';
+        let colorStyle = '';
+
+        if(type === 'start') dotClass = 't-dot';
+        else if(type === 'end') dotClass = 't-dot end';
+        else if(type === 'bus') {
+            dotClass = 't-dot';
+            colorStyle = 'color:#3182F6;'; // 파란 글씨
+        } else {
+            dotClass = 't-dot'; // 도보
+        }
+
+        const html = `
+            <div class="t-item">
+                <div class="${dotClass}" ${type==='bus' ? 'style="background:#f2f4f6; border:none; width:6px; height:6px; left:-17px;"' : ''}></div>
+                <div class="t-text" style="${colorStyle}">${title}</div>
+                ${desc ? `<div class="t-desc">${desc}</div>` : ''}
+            </div>
+        `;
+        box.innerHTML += html;
     }
 </script>
 
