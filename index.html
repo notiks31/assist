@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hybrid Optimized Map</title>
+    <title>Hybrid Transit Map</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,17 +33,17 @@
             <div class="search-form">
                 <div class="input-row">
                     <div class="dot start"></div>
-                    <input type="text" id="startInput" class="input-text" placeholder="출발지 (예: 강남역)">
+                    <input type="text" id="startInput" class="input-text" placeholder="출발지 (예: 서울역)">
                 </div>
                 <div class="input-row">
                     <div class="dot end"></div>
-                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 잠실역)">
+                    <input type="text" id="endInput" class="input-text" placeholder="도착지 (예: 홍대입구)">
                 </div>
                 <div style="display:flex; gap:8px; margin:12px 0;">
                     <button class="pill" onclick="fillSearch('현위치', '집')">🏠 집으로</button>
-                    <button class="pill" onclick="fillSearch('서울역', '홍대입구')">🚇 지하철</button>
+                    <button class="pill" onclick="fillSearch('서울역', '롯데월드')">🎡 놀러가기</button>
                 </div>
-                <button class="btn-search" onclick="runHybridSearch()">최적 경로 검색</button>
+                <button class="btn-search" onclick="runHybridSearch()">대중교통 경로 검색</button>
             </div>
 
             <div id="resultCard" class="result-card">
@@ -59,7 +59,7 @@
     </div>
 </div>
 
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=여기에_카카오_자바스크립트_키_붙여넣기&libraries=services"></script>
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=여기에_카카오_자바스크립트_키_넣기&libraries=services"></script>
 
 <script>
     /* -------------------------------------------
@@ -67,16 +67,15 @@
        ------------------------------------------- */
     const mapContainer = document.getElementById('map');
     const mapOption = { 
-        center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 중심
+        center: new kakao.maps.LatLng(37.566826, 126.9786567), 
         level: 6 
     };
     const map = new kakao.maps.Map(mapContainer, mapOption);
-    const ps = new kakao.maps.services.Places();
+    const ps = new kakao.maps.services.Places(); 
     
-    // ★ 중요 2: TMAP API 키 입력 (경로 데이터용) ★
-    const TMAP_APP_KEY = '여기에_TMAP_APP_KEY를_넣으세요'; 
+    // ★ TMAP API 키 (사용자님 제공 키 적용됨) ★
+    const TMAP_APP_KEY = 'vLTl0sk5ou1ba0TVgrpFM3Es6MWimZqo1xSDt3ti'; 
 
-    // 최적화를 위한 객체 관리 배열
     let polylines = [];
     let markers = [];
     let isTrafficOn = false;
@@ -92,7 +91,7 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-                // HTML 마커 대신 가벼운 CustomOverlay 사용 (렉 방지)
+                // 카카오 맵 위에 커스텀 마커 올리기
                 const content = `<div style="width:20px; height:20px; background:#3182F6; border:3px solid white; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
                 const overlay = new kakao.maps.CustomOverlay({ map: map, position: loc, content: content });
                 markers.push(overlay);
@@ -107,7 +106,7 @@
     }
 
     /* -------------------------------------------
-       [3] 시트 및 검색 폼 로직
+       [3] 시트 및 검색 로직
        ------------------------------------------- */
     const sheet = document.getElementById('bottomSheet');
     const resultCard = document.getElementById('resultCard');
@@ -132,18 +131,15 @@
         expandSheet();
     }
     function resetSearch() {
-        // 메모리 누수 방지를 위한 객체 삭제
         polylines.forEach(p => p.setMap(null)); polylines = [];
         markers.forEach(m => m.setMap(null)); markers = [];
-        
         resultCard.classList.remove('active');
         searchForm.style.display = 'block';
         collapseSheet();
     }
 
     /* -------------------------------------------
-       [4] 핵심: 하이브리드 경로 검색
-       (카카오 좌표 -> TMAP 데이터 -> 카카오 맵 그리기)
+       [4] 핵심: 하이브리드 검색 (Kakao + TMAP)
        ------------------------------------------- */
     async function runHybridSearch() {
         const sVal = document.getElementById('startInput').value;
@@ -157,14 +153,13 @@
         if(!sCoord || !eCoord) return alert("장소를 찾을 수 없습니다.");
 
         // 2. TMAP API로 경로 데이터 가져오기 & 그리기
-        await fetchTmapDataAndRender(sCoord, eCoord);
+        await fetchTmapTransitAndRender(sCoord, eCoord);
 
         // 3. UI 업데이트
         searchForm.style.display = 'none';
         resultCard.classList.add('active');
     }
 
-    // 카카오 장소 검색
     function getKakaoCoords(keyword) {
         return new Promise(resolve => {
             if(keyword.includes("현위치")) {
@@ -180,9 +175,9 @@
         });
     }
 
-    // TMAP 데이터 요청 및 렌더링
-    async function fetchTmapDataAndRender(start, end) {
-        // 프록시 서버 사용 (CORS 우회)
+    // TMAP 데이터 요청 -> 카카오 지도에 그리기
+    async function fetchTmapTransitAndRender(start, end) {
+        // 보안 우회(CORS) 프록시 사용
         const proxy = 'https://api.allorigins.win/raw?url=';
         const url = "https://apis.openapi.sk.com/transit/routes";
         
@@ -193,41 +188,23 @@
         };
 
         try {
-            // TMAP API 호출 (POST 방식은 proxy를 통해 보낼 때 주의 필요 - 여기서는 fetch 옵션 조정)
-            // allorigins는 GET 요청만 지원하는 경우가 많아, TMAP POST 요청이 막힐 수 있음.
-            // 따라서 여기서는 'GET' 방식의 TMAP API가 있다면 좋지만, 대중교통은 POST만 지원함.
-            // 해결책: cors-anywhere 등의 다른 프록시를 쓰거나, 로컬 테스트용 설정을 해야 함.
-            // 일단 가장 호환성 좋은 방식으로 시도.
-            
             const response = await fetch(proxy + encodeURIComponent(url), {
-                method: "POST", // allorigins가 POST 바디를 전달해주지 않을 수 있음 -> 확인 필요
-                // 만약 이 부분이 막히면 'cors-anywhere'로 교체해야 함.
-                // 일단 표준 fetch로 작성하되, 안되면 alert 띄움.
-                headers: { 
-                    "appKey": TMAP_APP_KEY, 
-                    "Content-Type": "application/json" 
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            // *중요*: 무료 Proxy들은 POST Body 전달을 잘 안해줌. 
-            // 만약 여기서 에러가 나면, 사용자에게 'Allow CORS' 확장프로그램 설치를 권장하는게 가장 확실함.
-            // (확장프로그램 사용 시 proxy 변수 제거하고 직접 호출)
-
-            // [확장프로그램 사용 가정 하에 직접 호출 코드]
-            // 실제 배포 시에는 백엔드 서버가 필요합니다.
-            const directResponse = await fetch(url, {
                 method: "POST",
                 headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
-            if (!directResponse.ok) throw new Error("TMAP API Error");
-            const data = await directResponse.json();
+            if (!response.ok) throw new Error("TMAP API Error");
+            const data = await response.json();
             
+            if (!data.metaData || !data.metaData.plan) {
+                alert("대중교통 경로를 찾을 수 없습니다.");
+                return;
+            }
+
             const itinerary = data.metaData.plan.itineraries[0];
             
-            // 결과 텍스트 업데이트
+            // 정보 업데이트
             const totalTime = Math.round(itinerary.totalTime / 60);
             const totalFare = itinerary.fare.regular.totalFare;
             document.getElementById('totalTime').innerText = `${totalTime}분`;
@@ -241,42 +218,35 @@
             addMarker(start.lat, start.lng, 'start');
             addMarker(end.lat, end.lng, 'end');
 
-            // 타임라인 생성
+            // 타임라인 초기화
             const timelineBox = document.getElementById('routeTimeline');
             timelineBox.innerHTML = '';
             addTimelineItem(timelineBox, 'walk', '출발', start.name);
 
-            // ★ 최적화된 경로 그리기 ★
+            // 경로 그리기
             const legs = itinerary.legs;
-            const bounds = new kakao.maps.LatLngBounds(); // 지도 범위 자동 조절용
+            const bounds = new kakao.maps.LatLngBounds(); 
 
             legs.forEach(leg => {
-                // 선 그리기 (LineString)
                 if (leg.passShape) {
-                    // TMAP 좌표 문자열 -> 카카오 LatLng 배열로 변환
+                    // TMAP 문자열 좌표 -> 카카오 LatLng 변환
                     const path = parseTmapShapeToKakao(leg.passShape);
                     
-                    // 스타일 결정 (도보 vs 버스)
                     const color = leg.mode === 'WALK' ? '#8B95A1' : '#3182F6';
                     const style = leg.mode === 'WALK' ? 'shortdash' : 'solid';
-                    const weight = leg.mode === 'WALK' ? 5 : 7; // 버스를 좀 더 굵게
+                    const weight = leg.mode === 'WALK' ? 5 : 7; 
 
                     const polyline = new kakao.maps.Polyline({
-                        path: path,
-                        strokeWeight: weight,
-                        strokeColor: color,
-                        strokeOpacity: 0.9,
-                        strokeStyle: style
+                        path: path, strokeWeight: weight, strokeColor: color,
+                        strokeOpacity: 0.9, strokeStyle: style
                     });
                     polyline.setMap(map);
                     polylines.push(polyline);
                     
-                    // 범위 확장에 모든 점을 넣으면 느려짐 -> 시작, 끝점만 추가 (최적화)
                     bounds.extend(path[0]);
                     bounds.extend(path[path.length-1]);
                 }
 
-                // 타임라인 추가
                 if (leg.mode === 'BUS' || leg.mode === 'SUBWAY') {
                     const time = Math.round(leg.sectionTime / 60);
                     addTimelineItem(timelineBox, 'bus', `${leg.route} 승차`, `${time}분 이동`);
@@ -287,17 +257,16 @@
             });
 
             addTimelineItem(timelineBox, 'walk', '도착', end.name);
-            map.setBounds(bounds); // 지도 뷰포트 자동 맞춤
+            map.setBounds(bounds); // 지도 범위 자동 조절
 
         } catch (e) {
             console.error(e);
-            alert("경로를 찾을 수 없습니다. (CORS 확장프로그램을 켜주세요)");
+            alert("경로를 찾을 수 없습니다. (콘솔 확인 필요)");
         }
     }
 
-    // TMAP 좌표 문자열 파싱 (핵심 최적화 함수)
+    // TMAP 좌표 -> 카카오 객체 변환
     function parseTmapShapeToKakao(passShape) {
-        // "lon,lat lon,lat ..." 문자열을 쪼개서 카카오 객체로 변환
         const coords = passShape.split(' ');
         return coords.map(c => {
             const [lng, lat] = c.split(',');
