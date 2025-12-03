@@ -1,508 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>Hybrid Transit Pro (최종)</title>
-    
+    <title>Hybrid Transit Pro</title>
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-
-    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
-
-    <style>
-        /* -------------------------------------------
-           [CSS 스타일 정의]
-           ------------------------------------------- */
-        :root {
-            --primary: #3182F6;
-            --text-main: #191F28;
-            --text-sub: #8B95A1;
-            --bg-base: #F2F4F6;
-            --white: #FFFFFF;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body {
-            margin: 0; padding: 0;
-            font-family: "Pretendard", sans-serif;
-            background-color: var(--bg-base);
-            height: 100dvh; overflow: hidden;
-            display: flex; justify-content: center;
-        }
-        
-        .app-frame {
-            width: 100%; max-width: 480px; height: 100%;
-            position: relative; background: var(--white);
-            display: flex; flex-direction: column;
-            box-shadow: 0 0 40px rgba(0,0,0,0.1);
-        }
-        
-        #map {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0;
-        }
-        
-        /* 플로팅 메뉴 (사용하지 않으므로 스타일은 남겨둠) */
-        .floating-menu {
-            position: absolute; bottom: 130px; right: 20px; z-index: 20;
-            display: flex; flex-direction: column; align-items: center; gap: 12px;
-        }
-        .menu-item {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: var(--white); border: none;
-            box-shadow: var(--shadow); font-size: 20px;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; opacity: 0; transform: translateY(10px);
-            pointer-events: none; transition: all 0.3s ease;
-        }
-        .toggle-btn {
-            width: 56px; height: 56px; border-radius: 50%;
-            background: var(--white); border: none; box-shadow: var(--shadow);
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 21; transition: 0.3s;
-        }
-        .toggle-btn svg { width: 24px; height: 24px; fill: var(--text-main); transition: 0.3s; }
-        
-        .floating-menu.open .menu-item { opacity: 1; transform: translateY(0); pointer-events: auto; }
-        .floating-menu.open .toggle-btn { background: var(--text-main); }
-        .floating-menu.open .toggle-btn svg { fill: white; transform: rotate(180deg); }
-        
-        /* 바텀 시트 */
-        .bottom-sheet {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: var(--white); z-index: 100;
-            border-top-left-radius: 24px; border-top-right-radius: 24px;
-            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            transform: translateY(0); 
-            max-height: 90%; 
-            display: flex; flex-direction: column;
-        }
-        /* 초기 상태: 축소 */
-        .bottom-sheet.collapsed { transform: translateY(calc(100% - 90px)); }
-        .bottom-sheet.expanded { transform: translateY(0); }
-        
-        .sheet-header { 
-            padding: 12px; display: flex; justify-content: center; align-items: center; 
-            cursor: pointer; position: relative; 
-        }
-        
-        /* 화살표 컨테이너 */
-        .handle-bar { 
-            width: 40px; height: 40px; background: var(--white); border-radius: 50%; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-            display: flex; justify-content: center; align-items: center; 
-            transition: all 0.35s ease-in-out;
-        }
-        
-        /* 화살표 SVG 스타일 */
-        .handle-bar svg { 
-            width: 20px; height: 20px; 
-            fill: var(--white); 
-            background-color: var(--primary); 
-            border-radius: 50%;
-            padding: 4px;
-            transition: all 0.35s ease-in-out; 
-            transform: rotate(0deg); 
-        }
-        
-        /* 축소 상태 (기본): 흰색 화살표 (위) - 파란 원 배경 */
-        .bottom-sheet.collapsed .handle-bar { 
-            background: var(--white); 
-        }
-        .bottom-sheet.collapsed .handle-bar svg {
-            fill: var(--white);
-            background-color: var(--primary); 
-            transform: rotate(0deg); 
-        }
-        
-        /* 확장 상태: 검은색 화살표 (아래) - 투명 배경 */
-        .bottom-sheet.expanded .handle-bar { 
-            background: var(--white); 
-        }
-        .bottom-sheet.expanded .handle-bar svg { 
-            fill: var(--text-main); 
-            background-color: transparent; 
-            transform: rotate(180deg); 
-        }
-
-        /* 시트 콘텐츠 */
-        .sheet-content { padding: 0 24px 40px 24px; overflow-y: auto; }
-        
-        /* 검색 바 및 폼 */
-        .search-bar {
-            background: var(--bg-base); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 10px; cursor: pointer;
-        }
-        .search-form { display: none; }
-        .bottom-sheet.expanded .search-form { display: block; }
-        .bottom-sheet.expanded .search-bar { display: none; }
-        
-        .input-row {
-            position: relative; /* 검색 결과 위치를 위해 relative 설정 */
-            background: var(--bg-base); padding: 12px 16px; border-radius: 12px;
-            margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
-        }
-        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;}
-        .dot.start { background: var(--text-main); }
-        .dot.end { background: var(--primary); }
-        .input-text { border: none; background: transparent; width: 100%; outline: none; font-size: 16px; }
-        
-        .btn-search {
-            width: 100%; padding: 16px; margin-top: 10px;
-            background: var(--primary); color: white; border: none; border-radius: 16px;
-            font-size: 16px; font-weight: 700; cursor: pointer;
-        }
-        
-        /* 실시간 검색 결과 추천 목록 스타일 */
-        .search-results {
-            position: absolute; z-index: 110; 
-            background: var(--white); border-radius: 8px;
-            box-shadow: var(--shadow); 
-            max-height: 300px; overflow-y: auto;
-            display: none; box-sizing: border-box;
-            width: calc(100% - 24px - 10px - 28px); /* Input 너비 맞추기 (수정 필요) */
-        }
-
-        .search-results-start { /* 시작지점 결과 목록 */
-            left: 24px;
-            top: 60px; /* input-row 아래에 오도록 임시 설정 */
-        }
-        .search-results-end { /* 도착지점 결과 목록 */
-            right: 24px;
-            top: 110px; /* input-row 아래에 오도록 임시 설정 */
-        }
-
-
-        .search-results ul { list-style: none; padding: 0; margin: 0; }
-        .search-results li { 
-            padding: 12px 15px; font-size: 15px; color: var(--text-main); 
-            border-bottom: 1px solid var(--bg-base); cursor: pointer; 
-            box-sizing: border-box; 
-        }
-        .search-results li:hover { background: var(--bg-base); }
-        .search-results li:last-child { border-bottom: none; }
-        .search-address { font-size: 12px; color: var(--text-sub); display: block; margin-top: 2px; }
-
-        /* 경로 검색 결과 스타일 */
-        #resultsContainer { margin-top: 20px; }
-        #resultsContainer h4 { margin-bottom: 10px; font-size: 18px; color: var(--text-main); }
-        
-        .route-summary {
-            padding: 15px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px;
-            background: var(--bg-base); cursor: pointer; transition: background 0.2s;
-        }
-        .route-summary:hover { background: #E5E5EA; }
-        .time-info { font-weight: bold; color: var(--primary); font-size: 16px; margin-bottom: 5px; }
-        .transit-info { font-size: 14px; color: var(--text-sub); }
-
-
-        /* 카테고리/장소 상세 정보 스타일 (기존 코드를 제거하지 않고 재활용) */
-        .placeinfo_wrap {position:absolute;bottom:28px;left:-150px;width:300px;}.placeinfo {position:relative;width:100%;border-radius:6px;border: 1px solid #ccc;border-bottom:2px solid #ddd;padding-bottom: 10px;background: #fff;}.placeinfo:nth-of-type(n) {border:0; box-shadow:0px 1px 2px #888;}.placeinfo_wrap .after {content:'';position:relative;margin-left:-12px;left:50%;width:22px;height:12px;background:url('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/vertex_white.png')}.placeinfo a, .placeinfo a:hover, .placeinfo a:active{color:#fff;text-decoration: none;}.placeinfo a, .placeinfo span {display: block;text-overflow: ellipsis;overflow: hidden;white-space: nowrap;}.placeinfo span {margin:5px 5px 0 5px;cursor: default;font-size:13px;}.placeinfo .title {font-weight: bold; font-size:14px;border-radius: 6px 6px 0 0;margin: -1px -1px 0 -1px;padding:10px; color: #fff;background: #d95050;background: #d95050 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center;}.placeinfo .tel {color:#0f7833;}.placeinfo .jibun {color:#999;font-size:11px;margin-top:0;}
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-theme="light">
     <div class="app-frame">
         <div id="map"></div>
-        
-        <div id="bottomSheet" class="bottom-sheet collapsed">
-            <div class="sheet-header" onclick="toggleSheet()">
+
+        <!-- 플로팅 버튼: 현재 위치, 테마 토글 -->
+        <div class="floating-buttons">
+            <button class="float-btn" id="currentLocationBtn" aria-label="현재 위치">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </button>
+            <button class="float-btn" id="themeToggleBtn" aria-label="테마 토글">
+                <svg viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
+        </div>
+
+        <div id="bottomSheet" class="bottom-sheet">
+            <div class="sheet-header" onclick="toggleSheet()" aria-label="시트 토글">
                 <div class="handle-bar">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 4L12 20M12 4L7 9M12 4L17 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
             </div>
-            
+
             <div class="sheet-content">
                 <div class="search-bar" onclick="expandSheet()">
+                    <svg width="20" height="20" fill="var(--text-sub)"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                     <span style="color: var(--text-sub);">출발지, 도착지를 입력하여 경로를 검색하세요.</span>
                 </div>
-
                 <div class="search-form">
                     <div class="input-row">
                         <span class="dot start"></span>
-                        <input type="text" id="startInput" class="input-text" placeholder="출발지를 입력하세요">
+                        <input type="text" id="startInput" class="input-text" placeholder="출발지 입력" aria-label="출발지">
                     </div>
                     <div class="input-row">
                         <span class="dot end"></span>
-                        <input type="text" id="endInput" class="input-text" placeholder="도착지를 입력하세요">
+                        <input type="text" id="endInput" class="input-text" placeholder="도착지 입력" aria-label="도착지">
                     </div>
-                    
+
                     <button class="btn-search" onclick="runHybridSearch()">경로 검색</button>
-                    
+
                     <div id="search-results-start" class="search-results search-results-start"></div>
                     <div id="search-results-end" class="search-results search-results-end"></div>
-                    
-                    <div id="resultsContainer">
-                        </div>
+
+                    <!-- 최근 검색 목록 -->
+                    <div id="recentSearches" class="recent-searches">
+                        <h4 style="font-size: var(--font-small); color: var(--text-sub);">최근 검색</h4>
+                        <div id="recentList"></div>
+                    </div>
+
+                    <div id="resultsContainer"></div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
-    
-    <script>
-        // *** 1. 상수 및 전역 변수 설정 ***
-        
-        // Vercel 배포 도메인 주소 (이 주소는 사용자가 설정한 프록시 서버 주소입니다)
-        const myServerUrl = "https://assist-jxup4d30i-notiks-projects.vercel.app/api/proxy";
-        
-        const mapContainer = document.getElementById('map');
-        const bottomSheet = document.getElementById('bottomSheet');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const mapOptions = {
-            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 지도의 중심좌표
-            level: 5 // 지도의 확대 레벨
-        };
-        
-        const map = new kakao.maps.Map(mapContainer, mapOptions);
-        const ps = new kakao.maps.services.Places(map); // 카카오 장소 검색 객체
-        const geocoder = new kakao.maps.services.Geocoder(); 
-        const markers = []; // Transit 마커 및 경로 마커 배열
-        let mapLoaded = false;
-        
-        // HTML 요소 변수
-        const startInput = document.getElementById('startInput');
-        const endInput = document.getElementById('endInput');
-        const startResults = document.getElementById('search-results-start');
-        const endResults = document.getElementById('search-results-end');
-
-        // 지도 로드 완료 시
-        kakao.maps.event.addListener(map, 'tilesloaded', function() {
-            if (!mapLoaded) {
-                console.log('Kakao Map Loaded');
-                mapLoaded = true;
-            }
-        });
-        
-        // *** 2. UI 및 이벤트 핸들러 ***
-        
-        // 바텀 시트 토글 기능
-        function toggleSheet() {
-            bottomSheet.classList.toggle('expanded');
-            bottomSheet.classList.toggle('collapsed');
-        }
-        
-        function expandSheet() {
-            if (bottomSheet.classList.contains('collapsed')) {
-                bottomSheet.classList.remove('collapsed');
-                bottomSheet.classList.add('expanded');
-            }
-        }
-        
-        
-        // *** 3. 실시간 검색 추천 기능 ***
-        
-        /* 실시간 장소 검색 요청 및 결과 표시 함수 */
-        function searchPlace(inputElement, resultContainer) {
-            const keyword = inputElement.value.trim();
-            if (keyword.length < 2) {
-                resultContainer.style.display = 'none';
-                return;
-            }
-
-            ps.keywordSearch(keyword, (data, status) => {
-                if (status === kakao.maps.services.Status.OK) {
-                    renderResults(data, inputElement, resultContainer);
-                } else {
-                    resultContainer.style.display = 'none';
-                }
-            }, { size: 5 }); 
-        }
-
-        /* 검색 결과를 HTML 목록으로 변환하여 화면에 표시하는 함수 */
-        function renderResults(places, inputElement, resultContainer) {
-            let html = '<ul>';
-            places.forEach(place => {
-                // 따옴표 처리 수정: replace(/'/g, "\\'")
-                const onClick = `selectResult('${inputElement.id}', '${place.place_name.replace(/'/g, "\\'")}', '${resultContainer.id}')`;
-                html += `<li onclick="${onClick}">
-                            ${place.place_name}
-                            <span class="search-address">${place.address_name || place.road_address_name}</span>
-                           </li>`;
-            });
-            html += '</ul>';
-            resultContainer.innerHTML = html;
-            
-            // 결과창 위치 계산: input-row 내에서 input-text 바로 아래에 위치하도록 조정
-            const inputRow = inputElement.closest('.input-row');
-            const inputRowRect = inputRow.getBoundingClientRect();
-            const sheetRect = bottomSheet.getBoundingClientRect();
-            
-            // 시트 콘텐츠 영역 기준으로 위치 설정
-            const leftOffset = 24; // sheet-content padding-left
-            
-            // input-row의 bottom을 기준으로 결과창 top 위치 설정
-            resultContainer.style.width = `${inputRow.offsetWidth - 38}px`; // input-row width - dot width - gap
-            resultContainer.style.top = `${inputRowRect.bottom - sheetRect.top + 5}px`; // input-row 아래에 5px 간격
-            resultContainer.style.left = `${leftOffset}px`;
-            resultContainer.style.display = 'block';
-        }
-
-        /* 목록을 클릭했을 때 Input 필드에 값을 넣고 목록을 숨기는 함수 */
-        function selectResult(inputId, placeName, resultContainerId) {
-            document.getElementById(inputId).value = placeName;
-            document.getElementById(resultContainerId).style.display = 'none';
-            document.getElementById(inputId).focus(); 
-            expandSheet();
-        }
-
-
-        // *** 4. TMAP Transit 경로 검색 로직 ***
-
-        async function fetchTmapDataAndRender(start, end) {
-            const payload = {
-                startX: start.x, startY: start.y,
-                endX: end.x, endY: end.y
-            };
-            
-            try {
-                // Vercel 서버 호출
-                const response = await fetch(myServerUrl, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-                
-                const data = await response.json();
-                if (data.error) { throw new Error(data.error); }
-                
-                renderRoutes(data.routes);
-                
-            } catch (error) {
-                console.error('TMAP 경로 검색 실패:', error);
-                resultsContainer.innerHTML = `<div style="color: red;">경로 검색 중 오류가 발생했습니다: ${error.message}</div>`;
-            }
-        }
-        
-        async function runHybridSearch() {
-            const startName = startInput.value.trim();
-            const endName = endInput.value.trim();
-            
-            if (!startName || !endName) {
-                alert('출발지와 도착지를 모두 입력해주세요.');
-                return;
-            }
-            
-            resultsContainer.innerHTML = '경로를 검색하는 중입니다...';
-            expandSheet();
-            
-            // 기존 마커 및 경로 제거
-            markers.forEach(m => m.setMap(null)); markers.length = 0;
-            if (window.polyline) window.polyline.setMap(null); 
-            
-            try {
-                const start = await geocode(startName);
-                const end = await geocode(endName);
-                await fetchTmapDataAndRender(start, end);
-                
-            } catch (error) {
-                resultsContainer.innerHTML = `<div style="color: red;">좌표 변환 또는 검색 실패: ${error.message}</div>`;
-            }
-        }
-        
-        function geocode(placeName) {
-            return new Promise((resolve, reject) => {
-                ps.keywordSearch(placeName, (data, status) => {
-                    if (status === kakao.maps.services.Status.OK) {
-                        resolve({ x: data[0].x, y: data[0].y, name: data[0].place_name });
-                    } else {
-                        reject(new Error(`${placeName}에 대한 정확한 장소를 찾을 수 없습니다.`));
-                    }
-                }, { size: 1 });
-            });
-        }
-        
-        function renderRoutes(routes) {
-            resultsContainer.innerHTML = '<h4>검색된 경로:</h4>';
-            
-            routes.forEach((route, index) => {
-                const totalTimeMinutes = Math.ceil(route.totalTime / 60);
-                const totalFare = route.totalFare;
-                
-                const summaryDiv = document.createElement('div');
-                summaryDiv.className = 'route-summary';
-                summaryDiv.innerHTML = `
-                    <div class="time-info">${totalTimeMinutes}분 소요</div>
-                    <div class="transit-info">요금: ${totalFare.toLocaleString()}원</div>
-                `;
-                summaryDiv.onclick = () => drawRoute(route);
-                resultsContainer.appendChild(summaryDiv);
-                
-                // 첫 번째 경로를 기본으로 지도에 그립니다.
-                if (index === 0) { drawRoute(route); }
-            });
-        }
-        
-        function drawRoute(route) {
-            markers.forEach(m => m.setMap(null)); markers.length = 0;
-            if (window.polyline) window.polyline.setMap(null);
-            
-            const points = [];
-            
-            // 경로 데이터 파싱 로직
-            route.legs.forEach(leg => {
-                leg.steps.forEach(step => {
-                    if (step.route) {
-                        step.route.linestring.split(' ').forEach(coordStr => {
-                            const [lon, lat] = coordStr.split(',');
-                            points.push(new kakao.maps.LatLng(lat, lon));
-                        });
-                    }
-                });
-            });
-            
-            if (points.length === 0) return;
-            
-            // 폴리라인 그리기
-            window.polyline = new kakao.maps.Polyline({
-                path: points, strokeWeight: 5, strokeColor: '#007bff', strokeOpacity: 0.8, strokeStyle: 'solid'
-            });
-            window.polyline.setMap(map);
-            
-            // 마커 설정 및 지도에 표시
-            const startPos = points[0];
-            const endPos = points[points.length - 1];
-            // 마커 이미지를 커스텀할 수 있지만, 여기서는 기본 마커를 사용
-            const startMarker = new kakao.maps.Marker({ position: startPos, title: '출발' });
-            const endMarker = new kakao.maps.Marker({ position: endPos, title: '도착' });
-            startMarker.setMap(map); endMarker.setMap(map);
-            markers.push(startMarker, endMarker);
-            
-            // 지도 영역 설정
-            const bounds = new kakao.maps.LatLngBounds();
-            points.forEach(p => bounds.extend(p));
-            map.setBounds(bounds);
-        }
-
-
-        // *** 5. 통합 초기화 및 이벤트 연결 ***
-        
-        // 실시간 검색 이벤트 리스너 연결
-        startInput.addEventListener('input', () => { 
-            searchPlace(startInput, startResults); 
-            if (startInput.value.trim().length >= 2) expandSheet(); // 입력 시작 시 시트 확장
-        });
-        endInput.addEventListener('input', () => { 
-            searchPlace(endInput, endResults); 
-            if (endInput.value.trim().length >= 2) expandSheet(); // 입력 시작 시 시트 확장
-        });
-
-        // 입력 필드 외 다른 곳 클릭 시 목록 숨김
-        document.addEventListener('click', (e) => {
-            if (!startInput.contains(e.target) && !startResults.contains(e.target)) { 
-                startResults.style.display = 'none'; 
-            }
-            if (!endInput.contains(e.target) && !endResults.contains(e.target)) { 
-                endResults.style.display = 'none'; 
-            }
-        });
-        
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
