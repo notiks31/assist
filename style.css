@@ -1,53 +1,54 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 :root {
-    --primary: #3182F6;
-    --text-main: #191F28;
-    --text-sub: #8B95A1;
-    --bg-base: #F2F4F6;
-    --white: #FFFFFF;
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    --primary: #3182F6;
+    --text-main: #191F28;
+    --text-sub: #8B95A1;
+    --bg-base: #F2F4F6;
+    --white: #FFFFFF;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-    margin: 0; padding: 0;
-    font-family: "Pretendard", sans-serif;
-    background-color: var(--bg-base);
-    height: 100dvh; overflow: hidden;
-    display: flex; justify-content: center;
+    margin: 0; padding: 0;
+    font-family: "Pretendard", sans-serif;
+    background-color: var(--bg-base);
+    height: 100dvh; overflow: hidden;
+    display: flex; justify-content: center;
 }
 
 .app-frame {
-    width: 100%; max-width: 480px; height: 100%;
-    position: relative; background: var(--white);
-    display: flex; flex-direction: column;
-    box-shadow: 0 0 40px rgba(0,0,0,0.1);
+    width: 100%; max-width: 480px; height: 100%;
+    position: relative; background: var(--white);
+    display: flex; flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.1);
 }
 
 #map {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0;
 }
 
+/* --- 플로팅 메뉴 관련 CSS (변경 없음) --- */
 .floating-menu {
-    position: absolute; bottom: 130px; right: 20px; z-index: 20;
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    position: absolute; bottom: 130px; right: 20px; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 .menu-item {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: var(--white); border: none;
-    box-shadow: var(--shadow); font-size: 20px;
-    display: flex; justify-content: center; align-items: center;
-    cursor: pointer; opacity: 0; transform: translateY(10px);
-    pointer-events: none; transition: all 0.3s ease;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--white); border: none;
+    box-shadow: var(--shadow); font-size: 20px;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; opacity: 0; transform: translateY(10px);
+    pointer-events: none; transition: all 0.3s ease;
 }
 .toggle-btn {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--white); border: none; box-shadow: var(--shadow);
-    display: flex; justify-content: center; align-items: center;
-    cursor: pointer; z-index: 21; transition: 0.3s;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--white); border: none; box-shadow: var(--shadow);
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; z-index: 21; transition: 0.3s;
 }
 .toggle-btn svg { width: 24px; height: 24px; fill: var(--text-main); transition: 0.3s; }
 
@@ -55,32 +56,78 @@ body {
 .floating-menu.open .toggle-btn { background: var(--text-main); }
 .floating-menu.open .toggle-btn svg { fill: white; transform: rotate(180deg); }
 
+
+/* --- 바텀 시트 관련 CSS (수정됨) --- */
 .bottom-sheet {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: var(--white); z-index: 100;
-    border-top-left-radius: 24px; border-top-right-radius: 24px;
-    box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    transform: translateY(0); max-height: 90%; display: flex; flex-direction: column;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--white); z-index: 100;
+    border-top-left-radius: 24px; border-top-right-radius: 24px;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(0); max-height: 90%; display: flex; flex-direction: column;
 }
 .bottom-sheet.collapsed { transform: translateY(calc(100% - 90px)); }
 .bottom-sheet.expanded { transform: translateY(0); }
 
-.sheet-header { padding: 12px; display: flex; justify-content: center; cursor: pointer; }
-.handle-bar { width: 40px; height: 4px; background: #E5E5EA; border-radius: 2px; }
+.sheet-header { 
+    padding: 12px; display: flex; justify-content: center; align-items: center; 
+    cursor: pointer; position: relative; 
+}
+
+/* 핸들 바를 화살표 배경으로 사용 */
+.handle-bar { 
+    width: 40px; height: 40px; background: var(--white); border-radius: 50%; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+    display: flex; justify-content: center; align-items: center; 
+    transition: all 0.35s ease-in-out;
+}
+
+/* 화살표 SVG 스타일 정의 */
+.handle-bar svg { 
+    width: 20px; height: 20px; 
+    fill: var(--white); /* 기본: 흰색 화살표 */
+    background-color: var(--primary); /* 기본: 파란색 원 배경 */
+    border-radius: 50%;
+    padding: 4px;
+    transition: all 0.35s ease-in-out; 
+    transform: rotate(0deg); /* 기본: 위쪽 */
+}
+
+/* 축소 상태 (기본): 흰색 화살표 (위) */
+.bottom-sheet.collapsed .handle-bar { 
+    background: var(--white); 
+}
+.bottom-sheet.collapsed .handle-bar svg {
+    fill: var(--white);
+    background-color: var(--primary); 
+    transform: rotate(0deg); 
+}
+
+/* 확장 상태: 검은색 화살표 (아래) */
+.bottom-sheet.expanded .handle-bar { 
+    background: var(--white); 
+}
+.bottom-sheet.expanded .handle-bar svg { 
+    fill: var(--text-main); /* 검은색 화살표 */
+    background-color: transparent; /* 배경 투명 */
+    transform: rotate(180deg); /* 아래쪽 */
+}
+
+
+/* --- 나머지 CSS (변경 없음) --- */
 .sheet-content { padding: 0 24px 40px 24px; overflow-y: auto; }
 
 .search-bar {
-    background: var(--bg-base); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    background: var(--bg-base); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
 }
 .search-form { display: none; }
 .bottom-sheet.expanded .search-form { display: block; }
 .bottom-sheet.expanded .search-bar { display: none; }
 
 .input-row {
-    background: var(--bg-base); padding: 12px 16px; border-radius: 12px;
-    margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
+    background: var(--bg-base); padding: 12px 16px; border-radius: 12px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot.start { background: var(--text-main); }
@@ -88,9 +135,9 @@ body {
 .input-text { border: none; background: transparent; width: 100%; outline: none; font-size: 16px; }
 
 .btn-search {
-    width: 100%; padding: 16px; margin-top: 10px;
-    background: var(--primary); color: white; border: none; border-radius: 16px;
-    font-size: 16px; font-weight: 700; cursor: pointer;
+    width: 100%; padding: 16px; margin-top: 10px;
+    background: var(--primary); color: white; border: none; border-radius: 16px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
 }
 
 .result-card { display: none; margin-top: 10px; }
