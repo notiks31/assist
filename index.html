@@ -1,71 +1,20 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>Hybrid Transit Pro</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-    <link rel="stylesheet" href="styles.css">
+	<meta charset="utf-8"/>
+	<title>Kakao 지도 시작하기</title>
 </head>
-<body data-theme="light">
-    <div class="app-frame">
-        <div id="map"></div>
+<body>
+	<div id="map" style="width:500px;height:400px;"></div>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=발급받은 APP KEY를 넣으시면 됩니다."></script>
+	<script>
+		var container = document.getElementById('map');
+		var options = {
+			center: new kakao.maps.LatLng(33.450701, 126.570667),
+			level: 3
+		};
 
-        <!-- 플로팅 버튼: 현재 위치, 테마 토글 -->
-        <div class="floating-buttons">
-            <button class="float-btn" id="currentLocationBtn" aria-label="현재 위치">
-                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            </button>
-            <button class="float-btn" id="themeToggleBtn" aria-label="테마 토글">
-                <svg viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-            </button>
-        </div>
-
-        <div id="bottomSheet" class="bottom-sheet">
-            <div class="sheet-header" onclick="toggleSheet()" aria-label="시트 토글">
-                <div class="handle-bar">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 4L12 20M12 4L7 9M12 4L17 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-            </div>
-
-            <div class="sheet-content">
-                <div class="search-bar" onclick="expandSheet()">
-                    <svg width="24" height="24" fill="var(--text-sub)"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <span>출발지, 도착지를 입력하여 경로를 검색하세요.</span>
-                </div>
-                <div class="search-form">
-                    <div class="input-row">
-                        <svg class="input-icon" width="20" height="20" fill="var(--text-sub)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                        <span class="dot start"></span>
-                        <input type="text" id="startInput" class="input-text" placeholder="출발지 입력" aria-label="출발지">
-                    </div>
-                    <div class="input-row">
-                        <svg class="input-icon" width="20" height="20" fill="var(--text-sub)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                        <span class="dot end"></span>
-                        <input type="text" id="endInput" class="input-text" placeholder="도착지 입력" aria-label="도착지">
-                    </div>
-
-                    <button class="btn-search" onclick="runHybridSearch()">경로 검색</button>
-
-                    <div id="search-results-start" class="search-results search-results-start"></div>
-                    <div id="search-results-end" class="search-results search-results-end"></div>
-
-                    <!-- 최근 검색 목록 -->
-                    <div id="recentSearches" class="recent-searches">
-                        <h4>최근 검색</h4>
-                        <div id="recentList"></div>
-                    </div>
-
-                    <div id="resultsContainer"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9d433a391319ff5dd19c3ae6940148df&libraries=services"></script>
-    <script src="script.js"></script>
+		var map = new kakao.maps.Map(container, options);
+	</script>
 </body>
 </html>
