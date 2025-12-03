@@ -39,7 +39,7 @@ body {
 
 .app-frame {
     width: 100%;
-    max-width: 480px;
+    max-width: 375px; /* 핸드폰 사이즈로 줄임 (예: iPhone 일반 크기) */
     height: 100%;
     position: relative;
     background: var(--white);
@@ -313,7 +313,7 @@ body {
 .error-msg { color: var(--error); font-size: var(--font-small); text-align: center; padding: 10px; }
 
 /* 미디어 쿼리: 더 작은 화면 최적화 */
-@media (max-width: 480px) {
+@media (max-width: 375px) {
     .app-frame { max-width: 100%; }
     .sheet-content { padding: 0 16px 80px 16px; }
 }
